@@ -21,3 +21,7 @@ web/venv/
 __pycache__/
 *.pyc
 .DS_Store
+
+# ไฟล์ config ส่วนตัว (CLI) + ขยะ
+config.json
+.mycron
