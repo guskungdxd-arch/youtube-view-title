@@ -1,0 +1,6 @@
+{
+  "video_id": "ใส่_VIDEO_ID_ของคลิปคุณ",
+  "title_template": "คลิปนี้ของผมมียอดวิว {views} วิว",
+  "update_interval_minutes": 60,
+  "min_change_to_update": 1
+}

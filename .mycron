@@ -1,0 +1,2 @@
+# อัปเดตชื่อคลิป YouTube ตามยอดวิว ทุกชั่วโมง (นาทีที่ 0)
+0 * * * * cd /Users/mac/youtube_change_name && ./venv/bin/python youtube_view_title.py >> /Users/mac/youtube_change_name/cron.log 2>&1

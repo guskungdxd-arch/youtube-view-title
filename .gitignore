@@ -1,0 +1,23 @@
+# === ความลับ ห้าม commit เด็ดขาด ===
+client_secret.json
+token.json
+web/token.json
+**/client_secret*.json
+.env
+web/.env
+*.env
+
+# === ฐานข้อมูล / logs / ไฟล์รัน ===
+data.db
+web/data.db
+*.log
+cron.log
+web/server.log
+web/preview.png
+
+# === Python ===
+venv/
+web/venv/
+__pycache__/
+*.pyc
+.DS_Store

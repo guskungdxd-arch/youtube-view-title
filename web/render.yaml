@@ -1,0 +1,26 @@
+# Deploy บน Render.com ฟรี — กด "New + → Blueprint" แล้วชี้มาที่ repo นี้
+services:
+  - type: web
+    name: youtube-view-title
+    runtime: python
+    plan: free
+    rootDir: web
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --workers 1 --timeout 120 --bind 0.0.0.0:$PORT
+    disk:
+      name: data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: DATABASE_PATH
+        value: /var/data/data.db
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: BASE_URL
+        sync: false
+      - key: FLASK_SECRET
+        generateValue: true
+      - key: UPDATE_INTERVAL_MINUTES
+        value: "30"

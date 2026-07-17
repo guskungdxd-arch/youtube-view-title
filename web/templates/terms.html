@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ข้อกำหนดการใช้งาน — ViewTitle</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap');
+    :root{--text:#1d1d1f;--sub:#6e6e73;--blue:#0071e3;--bg:#fff;--bg2:#f5f5f7;--border:#d2d2d7;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:"Noto Sans Thai",-apple-system,sans-serif;color:var(--text);background:var(--bg);line-height:1.7;-webkit-font-smoothing:antialiased;}
+    nav{height:48px;display:flex;align-items:center;padding:0 24px;background:rgba(255,255,255,.8);backdrop-filter:blur(20px);border-bottom:1px solid rgba(0,0,0,.06);font-size:.86rem;position:sticky;top:0;}
+    nav a{color:var(--blue);text-decoration:none;font-weight:600;}
+    .wrap{max-width:720px;margin:0 auto;padding:48px 24px 80px;}
+    h1{font-size:2.2rem;font-weight:700;letter-spacing:-.02em;margin-bottom:6px;}
+    .date{color:var(--sub);margin-bottom:32px;}
+    h2{font-size:1.25rem;font-weight:700;margin:32px 0 10px;}
+    p,li{color:#2b2b2e;}
+    ul{padding-left:22px;margin:8px 0;} li{margin:6px 0;}
+    a{color:var(--blue);}
+  </style>
+</head>
+<body>
+  <nav><a href="/">&lsaquo; กลับหน้าแรก</a></nav>
+  <div class="wrap">
+    <h1>ข้อกำหนดการใช้งาน</h1>
+    <p class="date">อัปเดตล่าสุด: 17 กรกฎาคม 2026</p>
+
+    <h2>1. การยอมรับข้อกำหนด</h2>
+    <p>เมื่อใช้บริการ ViewTitle ("บริการ") ถือว่าคุณยอมรับข้อกำหนดนี้ หากไม่ยอมรับ กรุณาหยุดใช้บริการ</p>
+
+    <h2>2. บริการคืออะไร</h2>
+    <p>บริการช่วยเปลี่ยนชื่อคลิป YouTube ของคุณให้แสดงยอดวิวล่าสุดโดยอัตโนมัติเป็นรอบ (ทุก 30 นาที)
+      คุณต้องเป็นเจ้าของคลิปที่นำมาใช้กับบริการ</p>
+
+    <h2>3. ความรับผิดชอบของผู้ใช้</h2>
+    <ul>
+      <li>ใช้บริการกับคลิปที่คุณเป็นเจ้าของเท่านั้น</li>
+      <li>ไม่ใช้บริการทำสิ่งผิดกฎหมายหรือละเมิดข้อกำหนดของ YouTube/Google</li>
+      <li>รับผิดชอบต่อชื่อคลิปและเนื้อหาที่ตั้งค่าเอง</li>
+    </ul>
+
+    <h2>4. การเปลี่ยนแปลงคลิป</h2>
+    <p>บริการจะแก้ไข "ชื่อคลิป" ของคุณตามที่คุณตั้งค่า โดยรักษาคำอธิบาย แท็ก และหมวดหมู่เดิมไว้
+      คุณสามารถปิดการทำงานอัตโนมัติ หรือเปลี่ยนชื่อกลับเองได้ตลอดเวลา</p>
+
+    <h2>5. ข้อจำกัดความรับผิด</h2>
+    <p>บริการให้ "ตามสภาพ" (as-is) เราไม่รับประกันว่าจะทำงานต่อเนื่องไม่มีข้อผิดพลาด
+      และไม่รับผิดต่อความเสียหายใด ๆ ที่เกิดจากการใช้บริการ รวมถึงกรณี YouTube API เปลี่ยนแปลงหรือหยุดทำงาน</p>
+
+    <h2>6. การยกเลิก</h2>
+    <p>คุณยกเลิกได้ทุกเมื่อผ่านปุ่ม "ลบบัญชี" ในแดชบอร์ด เราขอสงวนสิทธิ์ระงับบัญชีที่ละเมิดข้อกำหนด</p>
+
+    <h2>7. ติดต่อ</h2>
+    <p>ติดต่อ: <a href="mailto:{{ contact }}">{{ contact }}</a></p>
+  </div>
+</body>
+</html>

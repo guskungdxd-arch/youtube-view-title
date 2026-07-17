@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>แดชบอร์ด — ViewTitle</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap');
+    :root {
+      --text:#1d1d1f; --sub:#6e6e73; --blue:#0071e3; --blue-h:#0077ed;
+      --bg:#fff; --bg2:#f5f5f7; --border:#d2d2d7;
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:"Noto Sans Thai",-apple-system,"SF Pro Display",sans-serif; color:var(--text);
+      background:var(--bg2); -webkit-font-smoothing:antialiased; }
+    a { text-decoration:none; }
+    nav {
+      position:sticky; top:0; z-index:50; height:48px; display:flex; align-items:center; justify-content:center;
+      gap:24px; background:rgba(255,255,255,.8); backdrop-filter:saturate(180%) blur(20px);
+      border-bottom:1px solid rgba(0,0,0,.06); font-size:.86rem;
+    }
+    nav .brand { font-weight:700; }
+    nav a { color:#000; opacity:.8; } nav a:hover { opacity:1; }
+    nav .spacer { flex:1; }
+    .wrap { max-width:540px; margin:0 auto; padding:44px 22px 60px; }
+    h1 { font-size:clamp(1.9rem,5vw,2.6rem); font-weight:700; letter-spacing:-.02em; text-align:center; }
+    .lead { color:var(--sub); text-align:center; margin:10px 0 30px; }
+
+    .flash { background:#e8f5e9; border:1px solid #a5d6a7; color:#1b5e20; padding:12px 16px;
+      border-radius:14px; margin-bottom:20px; font-weight:500; text-align:center; }
+
+    .card { background:#fff; border-radius:22px; padding:30px; box-shadow:0 2px 10px rgba(0,0,0,.04); }
+    label { display:block; font-weight:600; margin:20px 0 8px; font-size:.98rem; }
+    label:first-child { margin-top:0; }
+    .hint { color:var(--sub); font-weight:400; font-size:.84rem; }
+    input[type=text] {
+      width:100%; padding:13px 15px; border-radius:12px; border:1px solid var(--border);
+      background:#fff; color:var(--text); font-size:1rem; font-family:inherit;
+    }
+    input[type=text]:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 4px rgba(0,113,227,.15); }
+
+    .switch { display:flex; align-items:center; gap:14px; margin-top:24px; padding:16px;
+      border:1px solid var(--border); border-radius:14px; background:var(--bg2); }
+    .switch label { margin:0; }
+    .switch input { width:50px; height:30px; appearance:none; background:#e5e5ea; border-radius:999px;
+      position:relative; cursor:pointer; transition:.25s; flex-shrink:0; }
+    .switch input:checked { background:#34c759; }
+    .switch input::after { content:""; position:absolute; top:2px; left:2px; width:26px; height:26px;
+      background:#fff; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,.3); transition:.25s; }
+    .switch input:checked::after { left:22px; }
+
+    .btn { width:100%; padding:14px; border-radius:12px; border:0; font-weight:600; font-size:1.02rem;
+      cursor:pointer; font-family:inherit; margin-top:22px; background:var(--blue); color:#fff; }
+    .btn:hover { background:var(--blue-h); }
+    .btn-sec { background:#fff; color:var(--blue); border:1px solid var(--border); margin-top:12px; }
+    .btn-sec:hover { background:var(--bg2); }
+
+    .status { margin-top:24px; padding:18px; border-radius:14px; background:var(--bg2); }
+    .status .k { color:var(--sub); font-size:.8rem; margin-bottom:6px; }
+    .status .v { font-weight:700; }
+    .muted { color:var(--sub); font-size:.82rem; }
+  </style>
+</head>
+<body>
+  <nav>
+    <span class="brand">ViewTitle</span>
+    <span class="spacer"></span>
+    <span class="muted">{{ user['email'] }}</span>
+    {% if is_admin %}<a href="{{ url_for('admin') }}">Admin</a>{% endif %}
+    <a href="{{ url_for('logout') }}">ออกจากระบบ</a>
+  </nav>
+
+  <div class="wrap">
+    <h1>ตั้งค่าคลิป</h1>
+    <p class="lead">ใส่ video ID แล้วเปิดสวิตช์ — ที่เหลือปล่อยให้ระบบจัดการ</p>
+
+    {% with messages = get_flashed_messages() %}
+      {% for m in messages %}<div class="flash">✓ {{ m }}</div>{% endfor %}
+    {% endwith %}
+
+    <div class="card">
+      <form method="post" action="{{ url_for('save') }}">
+        <label>Video ID <span class="hint">— ส่วนหลัง watch?v= ใน URL คลิป</span></label>
+        <input type="text" name="video_id" value="{{ user['video_id'] or '' }}" placeholder="dQw4w9WgXcQ" required>
+
+        <label>รูปแบบชื่อ <span class="hint">— ใช้ {views} แทนตำแหน่งยอดวิว</span></label>
+        <input type="text" name="title_template" value="{{ user['title_template'] }}">
+
+        <div class="switch">
+          <input type="checkbox" name="enabled" id="enabled" {% if user['enabled'] %}checked{% endif %}>
+          <label for="enabled">เปิดอัปเดตอัตโนมัติทุก {{ interval }} นาที</label>
+        </div>
+
+        <button class="btn" type="submit">บันทึกการตั้งค่า</button>
+      </form>
+
+      <form method="post" action="{{ url_for('run_now') }}">
+        <button class="btn btn-sec" type="submit">อัปเดตทันที (ทดสอบเดี๋ยวนี้)</button>
+      </form>
+
+      <div class="status">
+        <div class="k">สถานะล่าสุด</div>
+        <div class="v">{{ user['last_status'] or 'ยังไม่เคยรัน' }}</div>
+        {% if user['updated_at'] %}<div class="muted" style="margin-top:6px">อัปเดตเมื่อ {{ user['updated_at'] }}</div>{% endif %}
+      </div>
+    </div>
+
+    <form method="post" action="{{ url_for('delete_account') }}"
+          onsubmit="return confirm('ลบบัญชีและข้อมูลทั้งหมด? การกระทำนี้ย้อนกลับไม่ได้');"
+          style="text-align:center;margin-top:24px">
+      <button type="submit" style="background:none;border:0;color:#d70015;font-size:.9rem;cursor:pointer;font-family:inherit;text-decoration:underline">
+        ลบบัญชีและข้อมูลทั้งหมด
+      </button>
+    </form>
+  </div>
+</body>
+</html>

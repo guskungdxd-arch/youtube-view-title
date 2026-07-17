@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ViewTitle — เปลี่ยนชื่อคลิปตามยอดวิว</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap');
+    :root {
+      --text:#1d1d1f; --sub:#6e6e73; --blue:#0071e3; --blue-h:#0077ed;
+      --bg:#fff; --bg2:#f5f5f7; --border:#d2d2d7;
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body {
+      font-family:"Noto Sans Thai",-apple-system,"SF Pro Display","Segoe UI",sans-serif;
+      color:var(--text); background:var(--bg); -webkit-font-smoothing:antialiased;
+    }
+    a { text-decoration:none; }
+
+    /* nav */
+    nav {
+      position:sticky; top:0; z-index:50; height:48px; display:flex; align-items:center;
+      justify-content:center; gap:38px; background:rgba(255,255,255,.8);
+      backdrop-filter:saturate(180%) blur(20px); border-bottom:1px solid rgba(0,0,0,.06); font-size:.86rem;
+    }
+    nav .brand { font-weight:700; color:var(--text); }
+    nav a { color:#000; opacity:.8; }
+    nav a:hover { opacity:1; }
+    @media (max-width:640px){ nav { gap:20px; font-size:.78rem; } nav .hide { display:none; } }
+
+    /* hero */
+    .hero { text-align:center; padding:64px 22px 20px; }
+    .hero h1 {
+      font-size:clamp(2.4rem,6.4vw,3.9rem); font-weight:700; letter-spacing:-.02em; line-height:1.05;
+    }
+    .hero .sub {
+      font-size:clamp(1.15rem,2.6vw,1.6rem); font-weight:500; color:var(--text);
+      margin-top:12px; line-height:1.35;
+    }
+    .hero .sub .muted { color:var(--sub); }
+    .links { display:flex; gap:26px; justify-content:center; align-items:center; margin-top:22px; flex-wrap:wrap; }
+    .btn {
+      display:inline-flex; align-items:center; gap:9px; background:var(--blue); color:#fff;
+      padding:11px 24px; border-radius:980px; font-size:1.05rem; font-weight:500; border:0; cursor:pointer;
+      font-family:inherit;
+    }
+    .btn:hover { background:var(--blue-h); }
+    .textlink { color:var(--blue); font-size:1.05rem; font-weight:500; display:inline-flex; align-items:center; gap:3px; }
+    .textlink:hover { text-decoration:underline; }
+    .g { width:18px; height:18px; }
+
+    /* hero visual */
+    .visual { max-width:980px; margin:44px auto 0; padding:0 22px; }
+    .browser {
+      background:#fff; border:1px solid var(--border); border-radius:20px; overflow:hidden;
+      box-shadow:0 30px 60px -20px rgba(0,0,0,.22);
+    }
+    .browser .bar { height:44px; background:#f5f5f7; border-bottom:1px solid var(--border);
+      display:flex; align-items:center; gap:8px; padding:0 16px; }
+    .browser .bar i { width:12px; height:12px; border-radius:50%; display:block; }
+    .browser .bar .r{background:#ff5f57}.browser .bar .y{background:#febc2e}.browser .bar .gd{background:#28c840}
+    .browser .body { display:grid; grid-template-columns:1.4fr 1fr; gap:0; }
+    .browser .thumb { aspect-ratio:16/10; background:linear-gradient(135deg,#3a3a3c,#1d1d1f); position:relative; display:grid; place-items:center; }
+    .browser .thumb .play { width:56px; height:56px; border-radius:50%; background:rgba(255,255,255,.9); display:grid; place-items:center; color:#1d1d1f; font-size:20px; }
+    .browser .meta { padding:28px; display:flex; flex-direction:column; justify-content:center; gap:14px; }
+    .browser .live { display:inline-flex; align-items:center; gap:7px; font-size:.82rem; color:var(--sub); font-weight:600; }
+    .browser .live .dot { width:8px; height:8px; border-radius:50%; background:#34c759; box-shadow:0 0 0 4px rgba(52,199,89,.18); }
+    .browser .title { font-size:1.35rem; font-weight:700; letter-spacing:-.01em; }
+    .browser .count { color:var(--blue); }
+    @media (max-width:640px){ .browser .body{ grid-template-columns:1fr; } }
+
+    /* features */
+    .features { background:var(--bg2); margin-top:70px; padding:70px 22px; }
+    .features .in { max-width:980px; margin:0 auto; }
+    .features h2 { text-align:center; font-size:clamp(1.8rem,4vw,2.6rem); font-weight:700; letter-spacing:-.02em; }
+    .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; margin-top:40px; }
+    .feat { background:#fff; border-radius:20px; padding:30px; text-align:center; }
+    .feat .ic { font-size:34px; }
+    .feat h3 { font-size:1.2rem; font-weight:700; margin:14px 0 8px; }
+    .feat p { color:var(--sub); font-size:.98rem; line-height:1.5; }
+    @media (max-width:640px){ .grid{ grid-template-columns:1fr; } }
+
+    footer { text-align:center; color:var(--sub); font-size:.8rem; padding:30px; }
+  </style>
+</head>
+<body>
+  <nav>
+    <span class="brand">ViewTitle</span>
+    <a class="hide" href="#features">ฟีเจอร์</a>
+    <a class="hide" href="#features">วิธีใช้</a>
+    {% if user %}<a href="{{ url_for('dashboard') }}">แดชบอร์ด</a>
+    {% else %}<a href="{{ url_for('login') }}">เข้าสู่ระบบ</a>{% endif %}
+  </nav>
+
+  <section class="hero">
+    <h1>เปลี่ยนชื่อคลิปตามยอดวิว</h1>
+    <p class="sub">อัตโนมัติทุก 30 นาที <span class="muted">ไม่ต้องแตะเอง</span></p>
+    <div class="links">
+      {% if user %}
+        <a class="btn" href="{{ url_for('dashboard') }}">ไปที่แดชบอร์ด</a>
+      {% else %}
+        <a class="btn" href="{{ url_for('login') }}">
+          <svg class="g" viewBox="0 0 48 48"><path fill="#fff" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.3l7.8 6C12.2 13.3 17.6 9.5 24 9.5z" opacity=".0"/></svg>
+          เริ่มใช้ฟรี
+        </a>
+        <a class="textlink" href="#features">ดูวิธีใช้ &rsaquo;</a>
+      {% endif %}
+    </div>
+
+    <div class="visual">
+      <div class="browser">
+        <div class="bar"><i class="r"></i><i class="y"></i><i class="gd"></i></div>
+        <div class="body">
+          <div class="thumb"><div class="play">▶</div></div>
+          <div class="meta">
+            <span class="live"><span class="dot"></span>อัปเดตล่าสุด • เมื่อสักครู่</span>
+            <div class="title">คลิปนี้ของผมมียอดวิว <span class="count">12,345</span> วิว</div>
+            <span style="color:var(--sub);font-size:.9rem">ชื่อคลิปเปลี่ยนเองเมื่อยอดวิวเพิ่ม</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="features" id="features">
+    <div class="in">
+      <h2>ตั้งครั้งเดียว ที่เหลือปล่อยให้ระบบ</h2>
+      <div class="grid">
+        <div class="feat"><div class="ic">🔗</div><h3>เชื่อม YouTube</h3><p>ล็อกอิน Google ของคุณ ปลอดภัยด้วย OAuth ไม่เก็บรหัสผ่าน</p></div>
+        <div class="feat"><div class="ic">🔄</div><h3>อัปเดตอัตโนมัติ</h3><p>ระบบดึงยอดวิวแล้วเปลี่ยนชื่อคลิปให้เองทุก 30 นาที</p></div>
+        <div class="feat"><div class="ic">⚡️</div><h3>ประหยัดโควตา</h3><p>ถ้ายอดวิวไม่เปลี่ยน ระบบจะข้าม ไม่อัปเดตซ้ำให้เปลือง</p></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div style="margin-bottom:8px">
+      <a href="{{ url_for('privacy') }}" style="color:var(--blue);margin:0 10px">นโยบายความเป็นส่วนตัว</a>
+      <a href="{{ url_for('terms') }}" style="color:var(--blue);margin:0 10px">ข้อกำหนดการใช้งาน</a>
+    </div>
+    ViewTitle · อัปเดตเป็นรอบทุก 30 นาที (ไม่ใช่เรียลไทม์วินาทีต่อวินาที)
+  </footer>
+</body>
+</html>
