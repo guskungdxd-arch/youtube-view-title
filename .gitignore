@@ -25,3 +25,7 @@ __pycache__/
 # ไฟล์ config ส่วนตัว (CLI) + ขยะ
 config.json
 .mycron
+
+# ไฟล์ presentation (ไม่เอาขึ้น repo)
+youtube_bot_explained.pdf
+youtube_bot_explained.pptx
