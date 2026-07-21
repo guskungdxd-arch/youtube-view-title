@@ -1,4 +1,9 @@
 # Deploy บน Render.com ฟรี — กด "New + → Blueprint" แล้วชี้มาที่ repo นี้
+#
+# หมายเหตุ free tier:
+#  - ไม่มี persistent disk → SQLite (data.db) จะรีเซ็ตเมื่อ redeploy (ผู้ใช้ต้องล็อกอินใหม่)
+#  - เว็บหลับเมื่อไม่มีคนเข้า → scheduler อาจไม่รันตรงเวลา
+#  อยากให้ข้อมูลอยู่ถาวร + ไม่หลับ: เปลี่ยน plan เป็น starter แล้วเพิ่ม block disk กลับมา
 services:
   - type: web
     name: youtube-view-title
@@ -7,20 +12,18 @@ services:
     rootDir: web
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app --workers 1 --timeout 120 --bind 0.0.0.0:$PORT
-    disk:
-      name: data
-      mountPath: /var/data
-      sizeGB: 1
     envVars:
-      - key: DATABASE_PATH
-        value: /var/data/data.db
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
       - key: BASE_URL
         sync: false
+      - key: CONTACT_EMAIL
+        sync: false
       - key: FLASK_SECRET
         generateValue: true
+      - key: RUN_SCHEDULER
+        value: "1"
       - key: UPDATE_INTERVAL_MINUTES
         value: "30"
