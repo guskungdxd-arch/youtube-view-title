@@ -33,7 +33,7 @@ DB_PATH = os.environ.get("DATABASE_PATH", os.path.join(BASE_DIR, "data.db"))
 BASE_URL = os.environ.get("BASE_URL", "http://localhost:5000").rstrip("/")
 UPDATE_INTERVAL_MINUTES = int(os.environ.get("UPDATE_INTERVAL_MINUTES", "30"))
 DEFAULT_TEMPLATE = "คลิปนี้ของผมมียอดวิว {views} วิว"
-CONTACT_EMAIL = os.environ.get("CONTACT_EMAIL", "guskungdxd@gmail.com")
+CONTACT_EMAIL = os.environ.get("CONTACT_EMAIL", "your-email@example.com")
 APP_NAME = os.environ.get("APP_NAME", "ViewTitle")
 
 app = Flask(__name__)
