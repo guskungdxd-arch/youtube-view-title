@@ -4,26 +4,78 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Privacy Policy — ViewTitle</title>
+  <script>
+    /* Applied before first paint so a stored theme never flashes the wrong palette. */
+    (function () {
+      try {
+        var t = localStorage.getItem('theme');
+        if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    :root{--text:#1d1d1f;--sub:#6e6e73;--blue:#0071e3;--bg:#fff;--bg2:#f5f5f7;--border:#d2d2d7;}
+    /* Light palette — the default, and what a visitor with no stored choice sees. */
+    :root, :root[data-theme="light"]{
+      color-scheme:light;
+      --text:#1d1d1f;--sub:#6e6e73;--body:#3a3a3c;--blue:#0071e3;
+      --bg:#fff;--bg2:#f5f5f7;--raised:#f5f5f7;--chip:#f5f5f7;--border:#d2d2d7;
+      --nav-bg:rgba(255,255,255,.8);--nav-border:rgba(0,0,0,.06);--nav-link:#1d1d1f;
+      --icon-sun:block;--icon-moon:none;
+    }
+    /* Dark palette — only the variables change, never the rules that use them. */
+    @media (prefers-color-scheme:dark){
+      :root:not([data-theme="light"]){
+        color-scheme:dark;
+        --text:#f5f5f7;--sub:#a1a1a6;--body:#d1d1d6;--blue:#0a84ff;
+        --bg:#000;--bg2:#111113;--raised:#1c1c1e;--chip:#2c2c2e;--border:#38383a;
+        --nav-bg:rgba(0,0,0,.72);--nav-border:rgba(255,255,255,.1);--nav-link:#f5f5f7;
+        --icon-sun:none;--icon-moon:block;
+      }
+    }
+    :root[data-theme="dark"]{
+      color-scheme:dark;
+      --text:#f5f5f7;--sub:#a1a1a6;--body:#d1d1d6;--blue:#0a84ff;
+      --bg:#000;--bg2:#111113;--raised:#1c1c1e;--chip:#2c2c2e;--border:#38383a;
+      --nav-bg:rgba(0,0,0,.72);--nav-border:rgba(255,255,255,.1);--nav-link:#f5f5f7;
+      --icon-sun:none;--icon-moon:block;
+    }
     *{box-sizing:border-box;margin:0;padding:0;}
     body{font-family:"Inter",-apple-system,sans-serif;color:var(--text);background:var(--bg);line-height:1.7;-webkit-font-smoothing:antialiased;}
-    nav{height:48px;display:flex;align-items:center;padding:0 24px;background:rgba(255,255,255,.8);backdrop-filter:blur(20px);border-bottom:1px solid rgba(0,0,0,.06);font-size:.86rem;position:sticky;top:0;}
+    :focus-visible{outline:2px solid var(--blue);outline-offset:3px;border-radius:6px;}
+    nav{height:48px;display:flex;align-items:center;gap:16px;padding:0 24px;background:var(--nav-bg);backdrop-filter:blur(20px);border-bottom:1px solid var(--nav-border);font-size:.86rem;position:sticky;top:0;}
     nav a{color:var(--blue);text-decoration:none;font-weight:600;}
+    .theme-toggle{margin-left:auto;display:inline-grid;place-items:center;width:30px;height:30px;flex:none;padding:0;border:0;border-radius:8px;background:transparent;color:var(--nav-link);opacity:.8;cursor:pointer;font:inherit;-webkit-tap-highlight-color:transparent;}
+    .theme-toggle:hover{opacity:1;background:var(--chip);}
+    .theme-toggle svg{display:block;}
+    .theme-toggle .sun{display:var(--icon-sun);}
+    .theme-toggle .moon{display:var(--icon-moon);}
     .wrap{max-width:720px;margin:0 auto;padding:48px 24px 80px;}
     h1{font-size:2.2rem;font-weight:700;letter-spacing:-.02em;margin-bottom:6px;}
     .date{color:var(--sub);margin-bottom:32px;}
     h2{font-size:1.25rem;font-weight:700;margin:32px 0 10px;}
-    p,li{color:#3a3a3c;}
+    p,li{color:var(--body);}
     ul{padding-left:22px;margin:8px 0;} li{margin:6px 0;}
-    .box{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin:16px 0;}
+    .box{background:var(--raised);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin:16px 0;}
     a{color:var(--blue);}
-    code{background:var(--bg2);padding:2px 7px;border-radius:6px;font-size:.9em;}
+    code{background:var(--chip);padding:2px 7px;border-radius:6px;font-size:.9em;}
   </style>
 </head>
 <body>
-  <nav><a href="/">&lsaquo; Back to home</a></nav>
+  <nav>
+    <a href="{{ url_for('viewtitle') }}">&lsaquo; Back to home</a>
+    <button class="theme-toggle" type="button" id="theme-toggle" aria-label="Switch to dark theme">
+      <svg class="sun" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4.2"/>
+        <path d="M12 2.4v2.2M12 19.4v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.4 12h2.2M19.4 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/>
+      </svg>
+      <svg class="moon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M20.5 13.4A8.4 8.4 0 1 1 10.6 3.5a6.6 6.6 0 0 0 9.9 9.9z"/>
+      </svg>
+    </button>
+  </nav>
   <div class="wrap">
     <h1>Privacy Policy</h1>
     <p class="date">Last updated: 22 July 2026</p>
@@ -109,5 +161,32 @@
     <h2>8. Contact</h2>
     <p>Questions about privacy? Contact us at <a href="mailto:{{ contact }}">{{ contact }}</a>.</p>
   </div>
+
+  <script>
+    (function () {
+      var root = document.documentElement;
+      var btn = document.getElementById('theme-toggle');
+      var mq = window.matchMedia('(prefers-color-scheme: dark)');
+
+      function resolved() {
+        var t = root.getAttribute('data-theme');
+        return (t === 'dark' || t === 'light') ? t : (mq.matches ? 'dark' : 'light');
+      }
+      function sync() {
+        var dark = resolved() === 'dark';
+        btn.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+        btn.title = dark ? 'Switch to light theme' : 'Switch to dark theme';
+      }
+      btn.addEventListener('click', function () {
+        var next = resolved() === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        try { localStorage.setItem('theme', next); } catch (e) {}
+        sync();
+      });
+      if (mq.addEventListener) mq.addEventListener('change', sync);
+      else if (mq.addListener) mq.addListener(sync);
+      sync();
+    })();
+  </script>
 </body>
 </html>

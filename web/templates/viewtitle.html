@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ViewTitle — Keep your YouTube title in sync with its view count</title>
+  <meta name="description" content="ViewTitle automatically updates your YouTube video title to show its current view count.">
+  <script>
+    /* Applied before first paint so a stored theme never flashes the wrong palette. */
+    (function () {
+      try {
+        var t = localStorage.getItem('theme');
+        if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    /* Light palette — the default, and what a visitor with no stored choice sees. */
+    :root, :root[data-theme="light"] {
+      color-scheme:light;
+      --text:#1d1d1f; --sub:#6e6e73; --body:#3a3a3c; --blue:#0071e3; --blue-h:#0077ed;
+      --bg:#fff; --bg2:#f5f5f7; --surface:#fff; --raised:#f5f5f7;
+      --chip:#f5f5f7; --chip-alt:#fff; --border:#d2d2d7;
+      --nav-bg:rgba(255,255,255,.8); --nav-border:rgba(0,0,0,.06); --nav-link:#000;
+      --btn-bg:#0071e3; --btn-bg-h:#0077ed; --btn-fg:#fff;
+      --thumb-bg:linear-gradient(135deg,#3a3a3c,#1d1d1f);
+      --play-bg:rgba(255,255,255,.92); --play-fg:#1d1d1f;
+      --browser-shadow:0 22px 44px -26px rgba(0,0,0,.32);
+      --green:#34c759; --green-glow:rgba(52,199,89,.18); --dot-muted:#c7c7cc;
+      --icon-sun:block; --icon-moon:none;
+    }
+    /* Dark palette — only the variables change, never the rules that use them. */
+    @media (prefers-color-scheme:dark) {
+      :root:not([data-theme="light"]) {
+        color-scheme:dark;
+        --text:#f5f5f7; --sub:#a1a1a6; --body:#d1d1d6; --blue:#0a84ff; --blue-h:#409cff;
+        --bg:#000; --bg2:#111113; --surface:#1c1c1e; --raised:#1c1c1e;
+        --chip:#2c2c2e; --chip-alt:#3a3a3c; --border:#38383a;
+        --nav-bg:rgba(0,0,0,.72); --nav-border:rgba(255,255,255,.1); --nav-link:#f5f5f7;
+        --btn-bg:#0071e3; --btn-bg-h:#0a84ff; --btn-fg:#fff;
+        --thumb-bg:linear-gradient(135deg,#48484a,#2c2c2e);
+        --play-bg:rgba(255,255,255,.92); --play-fg:#1d1d1f;
+        --browser-shadow:0 22px 44px -26px rgba(0,0,0,.9);
+        --green:#30d158; --green-glow:rgba(48,209,88,.22); --dot-muted:#636366;
+        --icon-sun:none; --icon-moon:block;
+      }
+    }
+    :root[data-theme="dark"] {
+      color-scheme:dark;
+      --text:#f5f5f7; --sub:#a1a1a6; --body:#d1d1d6; --blue:#0a84ff; --blue-h:#409cff;
+      --bg:#000; --bg2:#111113; --surface:#1c1c1e; --raised:#1c1c1e;
+      --chip:#2c2c2e; --chip-alt:#3a3a3c; --border:#38383a;
+      --nav-bg:rgba(0,0,0,.72); --nav-border:rgba(255,255,255,.1); --nav-link:#f5f5f7;
+      --btn-bg:#0071e3; --btn-bg-h:#0a84ff; --btn-fg:#fff;
+      --thumb-bg:linear-gradient(135deg,#48484a,#2c2c2e);
+      --play-bg:rgba(255,255,255,.92); --play-fg:#1d1d1f;
+      --browser-shadow:0 22px 44px -26px rgba(0,0,0,.9);
+      --green:#30d158; --green-glow:rgba(48,209,88,.22); --dot-muted:#636366;
+      --icon-sun:none; --icon-moon:block;
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body {
+      font-family:"Inter",-apple-system,"SF Pro Display","Segoe UI",sans-serif;
+      color:var(--text); background:var(--bg); -webkit-font-smoothing:antialiased;
+      overflow-wrap:anywhere;
+    }
+    img { max-width:100%; }
+    a { text-decoration:none; }
+    :focus-visible { outline:2px solid var(--blue); outline-offset:3px; border-radius:6px; }
+
+    /* nav */
+    nav {
+      position:sticky; top:0; z-index:50; height:48px; display:flex; align-items:center;
+      justify-content:center; gap:34px; background:var(--nav-bg);
+      backdrop-filter:saturate(180%) blur(20px); border-bottom:1px solid var(--nav-border); font-size:.86rem;
+    }
+    nav .brand { font-weight:700; color:var(--text); display:inline-flex; align-items:center; gap:8px; }
+    nav .brand img { border-radius:6px; display:block; }
+    nav a { color:var(--nav-link); opacity:.8; }
+    nav a:hover { opacity:1; }
+    @media (max-width:640px){ nav { gap:18px; font-size:.78rem; } nav .hide { display:none; } }
+
+    /* theme toggle */
+    .theme-toggle {
+      display:inline-grid; place-items:center; width:30px; height:30px; flex:none;
+      padding:0; border:0; border-radius:8px; background:transparent; color:var(--nav-link);
+      opacity:.8; cursor:pointer; font:inherit; -webkit-tap-highlight-color:transparent;
+    }
+    .theme-toggle:hover { opacity:1; background:var(--chip); }
+    .theme-toggle svg { display:block; }
+    .theme-toggle .sun { display:var(--icon-sun); }
+    .theme-toggle .moon { display:var(--icon-moon); }
+
+    /* hero */
+    .hero { text-align:center; padding:74px 22px 0; }
+    .hero .eyebrow {
+      display:inline-block; font-size:.8rem; font-weight:600; letter-spacing:.06em;
+      text-transform:uppercase; color:var(--sub); margin-bottom:16px;
+    }
+    .hero h1 { font-size:clamp(2.4rem,6.4vw,3.6rem); font-weight:700; letter-spacing:-.03em; line-height:1.08; }
+    .hero .tagline {
+      font-size:clamp(1.15rem,2.6vw,1.5rem); font-weight:600; color:var(--text);
+      margin:14px auto 0; line-height:1.35; text-wrap:balance;
+    }
+    .hero .sub {
+      font-size:clamp(1rem,2.1vw,1.1rem); font-weight:400; color:var(--sub);
+      margin:20px auto 0; line-height:1.65; max-width:60ch;
+    }
+    .links { display:flex; gap:24px; justify-content:center; align-items:center; margin-top:30px; flex-wrap:wrap; }
+    .btn {
+      display:inline-flex; align-items:center; gap:9px; background:var(--btn-bg); color:var(--btn-fg);
+      padding:11px 26px; border-radius:980px; font-size:1.02rem; font-weight:600; border:0;
+      cursor:pointer; font-family:inherit;
+    }
+    .btn:hover { background:var(--btn-bg-h); }
+    .textlink { color:var(--blue); font-size:1.02rem; font-weight:500; }
+    .textlink:hover { text-decoration:underline; }
+
+    /* hero visual */
+    .visual { max-width:860px; margin:52px auto 0; padding:0 22px; }
+    .browser {
+      background:var(--surface); border:1px solid var(--border); border-radius:18px; overflow:hidden;
+      box-shadow:var(--browser-shadow);
+    }
+    .browser .bar { height:40px; background:var(--chip); border-bottom:1px solid var(--border);
+      display:flex; align-items:center; gap:8px; padding:0 16px; }
+    .browser .bar i { width:11px; height:11px; border-radius:50%; display:block; }
+    /* macOS traffic lights: identical in both system appearances, so they stay literal. */
+    .browser .bar .r{background:#ff5f57}.browser .bar .y{background:#febc2e}.browser .bar .gd{background:#28c840}
+    .browser .body { display:grid; grid-template-columns:1.4fr 1fr; }
+    .browser .thumb { aspect-ratio:16/9; background:var(--thumb-bg); display:grid; place-items:center; }
+    .browser .thumb .play { width:54px; height:54px; border-radius:50%; background:var(--play-bg);
+      display:grid; place-items:center; color:var(--play-fg); }
+    .browser .meta { padding:26px; display:flex; flex-direction:column; justify-content:center; gap:12px; text-align:left; }
+    .browser .live { display:inline-flex; align-items:center; gap:7px; font-size:.8rem; color:var(--sub); font-weight:600; }
+    .browser .live .dot { width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 0 4px var(--green-glow); }
+    .browser .title { font-size:1.25rem; font-weight:700; letter-spacing:-.01em; line-height:1.35; }
+    .browser .count { color:var(--blue); }
+    .browser .note { color:var(--sub); font-size:.88rem; line-height:1.5; }
+    @media (max-width:700px){ .browser .body{ grid-template-columns:1fr; } }
+
+    /* shared section furniture */
+    .section-head { text-align:center; }
+    .section-head h2 { font-size:clamp(1.6rem,3.6vw,2.2rem); font-weight:700; letter-spacing:-.02em; text-wrap:balance; }
+    .section-head .lede { color:var(--sub); margin:12px auto 0; line-height:1.6; font-size:1.02rem; max-width:46ch; text-wrap:balance; }
+
+    /* features */
+    .features { background:var(--bg2); margin-top:86px; padding:80px 22px; }
+    .grid {
+      display:grid; gap:18px; margin:44px auto 0; max-width:940px;
+      grid-template-columns:repeat(3,1fr);
+    }
+    @media (max-width:840px){ .grid { grid-template-columns:1fr; max-width:520px; gap:14px; } }
+    .feat { background:var(--surface); border-radius:18px; padding:28px 26px; }
+    .feat .ic {
+      width:38px; height:38px; border-radius:11px; background:var(--chip);
+      display:grid; place-items:center; color:var(--sub);
+    }
+    .feat .ic svg { display:block; }
+    .feat h3 { font-size:1.05rem; font-weight:700; letter-spacing:-.01em; margin:18px 0 7px; }
+    .feat p { color:var(--sub); font-size:.95rem; line-height:1.6; }
+
+    /* about */
+    .about { padding:86px 22px 92px; }
+    .about .in { max-width:660px; margin:0 auto; }
+    .about h2 { font-size:clamp(1.7rem,3.8vw,2.3rem); font-weight:700; letter-spacing:-.02em; }
+    .about .lede { font-size:1.12rem; line-height:1.65; color:var(--sub); margin-top:16px; }
+    .about .block { margin-top:54px; }
+    .about h3 {
+      font-size:.82rem; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+      color:var(--sub); margin-bottom:18px;
+    }
+    .about p, .about li { color:var(--body); line-height:1.7; font-size:1.02rem; }
+    .about code {
+      background:var(--chip); border:1px solid var(--border); padding:2px 7px;
+      border-radius:6px; font-size:.88em; overflow-wrap:break-word;
+    }
+    .about a { color:var(--blue); }
+    .about a:hover { text-decoration:underline; }
+
+    /* numbered steps */
+    .steps { list-style:none; display:grid; gap:20px; counter-reset:step; }
+    .steps li { counter-increment:step; position:relative; padding-left:46px; }
+    .steps li::before {
+      content:counter(step); position:absolute; left:0; top:1px;
+      width:28px; height:28px; border-radius:50%; background:var(--chip); border:1px solid var(--border);
+      color:var(--text); font-size:.85rem; font-weight:600; font-variant-numeric:tabular-nums;
+      display:grid; place-items:center;
+    }
+
+    /* dot lists */
+    .dotlist { list-style:none; display:grid; gap:14px; }
+    .dotlist li { position:relative; padding-left:22px; }
+    .dotlist li::before {
+      content:""; position:absolute; left:3px; top:.68em;
+      width:7px; height:7px; border-radius:50%; background:var(--blue);
+    }
+    .dotlist.muted li::before { background:var(--dot-muted); }
+
+    /* scope disclosure panel */
+    .panel { background:var(--raised); border:1px solid var(--border); border-radius:18px; padding:30px 28px; }
+    .panel h3 { margin-bottom:14px; }
+    .panel code { background:var(--chip-alt); }
+    .panel .dotlist { margin:18px 0; }
+    .panel .closing { margin-top:18px; }
+
+    .about .more { margin-top:46px; font-size:1.02rem; color:var(--sub); }
+
+    footer { text-align:center; color:var(--sub); font-size:.82rem; padding:30px 22px; border-top:1px solid var(--border); line-height:1.6; }
+    footer a { color:var(--blue); margin:0 10px; }
+
+    @media (max-width:640px){
+      .hero { padding:56px 20px 0; }
+      .features { margin-top:64px; padding:60px 20px; }
+      .about { padding:60px 20px 68px; }
+      .about .block { margin-top:42px; }
+      .panel { padding:24px 20px; }
+      .visual { margin-top:40px; padding:0 20px; }
+      .browser .meta { padding:22px; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <span class="brand">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="ViewTitle logo" width="22" height="22">
+      ViewTitle
+    </span>
+    <a class="hide" href="#features">Features</a>
+    <a class="hide" href="#about">About</a>
+    {% if user %}<a href="{{ url_for('dashboard') }}">Dashboard</a>
+    {% else %}<a href="{{ url_for('login') }}">Sign in</a>{% endif %}
+    <button class="theme-toggle" type="button" id="theme-toggle" aria-label="Switch to dark theme">
+      <svg class="sun" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4.2"/>
+        <path d="M12 2.4v2.2M12 19.4v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.4 12h2.2M19.4 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/>
+      </svg>
+      <svg class="moon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M20.5 13.4A8.4 8.4 0 1 1 10.6 3.5a6.6 6.6 0 0 0 9.9 9.9z"/>
+      </svg>
+    </button>
+  </nav>
+
+  <header class="hero">
+    <span class="eyebrow">YouTube title automation</span>
+    <h1>ViewTitle</h1>
+    <p class="tagline">Your video title, always showing its view count</p>
+    <p class="sub">
+      ViewTitle is a web app that automatically updates your YouTube video's title to
+      show how many views it currently has — for example, <i>"This video has 12,345
+      views"</i>. Connect your YouTube account, pick a video you own, and ViewTitle
+      keeps the title up to date for you. No manual editing, ever.
+    </p>
+
+    <div class="links">
+      {% if user %}
+        <a class="btn" href="{{ url_for('dashboard') }}">Go to dashboard</a>
+      {% else %}
+        <a class="btn" href="{{ url_for('login') }}">Sign in with Google</a>
+        <a class="textlink" href="#about">Learn how it works &rsaquo;</a>
+      {% endif %}
+    </div>
+
+    <div class="visual">
+      <div class="browser">
+        <div class="bar"><i class="r"></i><i class="y"></i><i class="gd"></i></div>
+        <div class="body">
+          <div class="thumb">
+            <span class="play" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M9 6.5v11l9-5.5-9-5.5z"/></svg>
+            </span>
+          </div>
+          <div class="meta">
+            <span class="live"><span class="dot"></span>Last updated · just now</span>
+            <p class="title">This video has <span class="count">12,345</span> views</p>
+            <p class="note">The title changes on its own as views grow</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="features" id="features">
+      <div class="section-head">
+        <h2>Set it once, then forget it</h2>
+        <p class="lede">Three things ViewTitle handles so you never touch the title again.</p>
+      </div>
+
+      <div class="grid">
+        <div class="feat">
+          <span class="ic" aria-hidden="true">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+            </svg>
+          </span>
+          <h3>Connect YouTube</h3>
+          <p>Sign in with Google. Secure OAuth 2.0 — we never see or store your password.</p>
+        </div>
+
+        <div class="feat">
+          <span class="ic" aria-hidden="true">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12a9 9 0 0 1-14.66 6.96L3 16"/>
+              <path d="M3 12a9 9 0 0 1 14.66-6.96L21 8"/>
+              <path d="M21 4v4h-4M3 20v-4h4"/>
+            </svg>
+          </span>
+          <h3>Updates automatically</h3>
+          <p>Every 30 minutes we read the latest view count and rewrite the title for you.</p>
+        </div>
+
+        <div class="feat">
+          <span class="ic" aria-hidden="true">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M13 2 4 13.5h7L10 22l9-11.5h-7L13 2z"/>
+            </svg>
+          </span>
+          <h3>Quota friendly</h3>
+          <p>If the view count hasn't changed, we skip the update instead of wasting API quota.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="about" id="about">
+      <div class="in">
+        <h2>About ViewTitle</h2>
+        <p class="lede">
+          ViewTitle is a small web app that keeps a YouTube video's title in sync with how
+          many views it has. Instead of editing the title by hand every time the view count
+          changes, ViewTitle does it for you on a schedule.
+        </p>
+
+        <div class="block">
+          <h3>How it works</h3>
+          <ol class="steps" role="list">
+            <li>Sign in with the Google account that owns the video.</li>
+            <li>Enter the ID of a video you own and choose a title format, for example
+                <code>This video has {views} views</code>.</li>
+            <li>Every 30 minutes ViewTitle reads the current view count and, if it changed,
+                updates that video's title. If nothing changed, it does nothing.</li>
+          </ol>
+        </div>
+
+        <div class="block panel">
+          <h3>What data we access, and why</h3>
+          <p>
+            ViewTitle requests the <code>youtube.force-ssl</code> scope and uses it for
+            exactly two operations, only on videos <i>you</i> choose:
+          </p>
+          <ul class="dotlist">
+            <li><b>Read</b> the video's view count and current title
+                (<code>videos.list</code>) — so we know what to write.</li>
+            <li><b>Update</b> that video's title (<code>videos.update</code>) — the core
+                feature. Description, tags and category are preserved unchanged.</li>
+          </ul>
+          <p class="closing">
+            We do not read, modify, upload or delete anything else on your channel, and we
+            never sell or share your data. You can revoke access and permanently delete all
+            of your data at any time from the dashboard.
+          </p>
+        </div>
+
+        <div class="block">
+          <h3>Good to know</h3>
+          <ul class="dotlist muted">
+            <li>Updates run on a schedule (every 30 minutes), not in real time — YouTube's
+                own view counts are delayed too, and frequent title edits would waste API quota.</li>
+            <li>You must be the owner of any video you configure.</li>
+            <li>You can turn automatic updates off, or delete your account, at any time.</li>
+          </ul>
+        </div>
+
+        <p class="more">
+          Read our <a href="{{ url_for('privacy') }}">Privacy Policy</a> and
+          <a href="{{ url_for('terms') }}">Terms of Service</a>.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div style="margin-bottom:8px">
+      <a href="{{ url_for('privacy') }}">Privacy Policy</a>
+      <a href="{{ url_for('terms') }}">Terms of Service</a>
+    </div>
+    ViewTitle · Titles update on a 30-minute schedule (not second-by-second real time)
+  </footer>
+
+  <script>
+    (function () {
+      var root = document.documentElement;
+      var btn = document.getElementById('theme-toggle');
+      var mq = window.matchMedia('(prefers-color-scheme: dark)');
+
+      function resolved() {
+        var t = root.getAttribute('data-theme');
+        return (t === 'dark' || t === 'light') ? t : (mq.matches ? 'dark' : 'light');
+      }
+      function sync() {
+        var dark = resolved() === 'dark';
+        btn.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+        btn.title = dark ? 'Switch to light theme' : 'Switch to dark theme';
+      }
+      btn.addEventListener('click', function () {
+        var next = resolved() === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        try { localStorage.setItem('theme', next); } catch (e) {}
+        sync();
+      });
+      if (mq.addEventListener) mq.addEventListener('change', sync);
+      else if (mq.addListener) mq.addListener(sync);
+      sync();
+    })();
+  </script>
+</body>
+</html>

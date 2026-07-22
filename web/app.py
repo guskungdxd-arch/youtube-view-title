@@ -36,6 +36,19 @@ DEFAULT_TEMPLATE = "คลิปนี้ของผมมียอดวิว
 CONTACT_EMAIL = os.environ.get("CONTACT_EMAIL", "your-email@example.com")
 APP_NAME = os.environ.get("APP_NAME", "ViewTitle")
 
+# โปรเจกต์ที่โชว์บนหน้าแรก (portfolio hub) — "logo" คือชื่อไฟล์ใน web/static/
+PROJECTS = [
+    {
+        "name": "ViewTitle",
+        "tagline": "Your video title, always up to date.",
+        "description": "Automatically rewrites a YouTube video's title with its live view count, so the title always shows the real number.",
+        "url": "/viewtitle",
+        "status": "Live",
+        "tags": ["Flask", "YouTube Data API", "OAuth 2.0"],
+        "logo": "logo.png",
+    },
+]
+
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET", "dev-secret-change-me")
 
@@ -187,8 +200,15 @@ def is_admin(user):
 
 
 @app.route("/")
-def index():
-    return render_template("index.html", user=current_user())
+def home():
+    """หน้าแรก = portfolio hub รวมโปรเจกต์"""
+    return render_template("home.html", projects=PROJECTS, user=current_user())
+
+
+@app.route("/viewtitle")
+def viewtitle():
+    """หน้า landing เดิมของ ViewTitle (Google review อ่านหน้านี้)"""
+    return render_template("viewtitle.html", user=current_user())
 
 
 @app.route("/login")
@@ -234,7 +254,7 @@ def oauth2callback():
 def dashboard():
     user = current_user()
     if not user:
-        return redirect(url_for("index"))
+        return redirect(url_for("viewtitle"))
     return render_template(
         "dashboard.html", user=user, interval=UPDATE_INTERVAL_MINUTES,
         is_admin=is_admin(user),
@@ -327,13 +347,13 @@ def delete_account():
     with db() as conn:
         conn.execute("DELETE FROM users WHERE sub=?", (user["sub"],))
     session.clear()
-    return redirect(url_for("index"))
+    return redirect(url_for("viewtitle"))
 
 
 @app.route("/logout")
 def logout():
     session.clear()
-    return redirect(url_for("index"))
+    return redirect(url_for("viewtitle"))
 
 
 # --------------------------------------------------------------- เริ่มระบบ
