@@ -38,6 +38,14 @@
       margin-top:12px; line-height:1.35;
     }
     .hero .sub .muted { color:var(--sub); }
+    .hero .appname {
+      font-size:1.05rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+      color:var(--blue); margin-bottom:14px;
+    }
+    .hero .sub-en {
+      max-width:620px; margin:18px auto 0; color:var(--sub);
+      font-size:1rem; line-height:1.6;
+    }
     .links { display:flex; gap:26px; justify-content:center; align-items:center; margin-top:22px; flex-wrap:wrap; }
     .btn {
       display:inline-flex; align-items:center; gap:9px; background:var(--blue); color:#fff;
@@ -80,6 +88,16 @@
     .feat p { color:var(--sub); font-size:.98rem; line-height:1.5; }
     @media (max-width:640px){ .grid{ grid-template-columns:1fr; } }
 
+    .about { padding:70px 22px; }
+    .about .in { max-width:720px; margin:0 auto; }
+    .about h2 { font-size:clamp(1.6rem,3.4vw,2.2rem); font-weight:700; letter-spacing:-.02em; margin-bottom:16px; }
+    .about h3 { font-size:1.15rem; font-weight:700; margin:28px 0 10px; }
+    .about p, .about li { color:#3a3a3c; line-height:1.65; }
+    .about ol, .about ul { padding-left:22px; margin:8px 0; }
+    .about li { margin:7px 0; }
+    .about code { background:var(--bg2); border:1px solid var(--border); padding:2px 7px; border-radius:6px; font-size:.9em; }
+    .about a { color:var(--blue); }
+
     footer { text-align:center; color:var(--sub); font-size:.8rem; padding:30px; }
   </style>
 </head>
@@ -87,14 +105,21 @@
   <nav>
     <span class="brand">ViewTitle</span>
     <a class="hide" href="#features">ฟีเจอร์</a>
-    <a class="hide" href="#features">วิธีใช้</a>
+    <a class="hide" href="#about">About</a>
     {% if user %}<a href="{{ url_for('dashboard') }}">แดชบอร์ด</a>
     {% else %}<a href="{{ url_for('login') }}">เข้าสู่ระบบ</a>{% endif %}
   </nav>
 
   <section class="hero">
+    <p class="appname">ViewTitle</p>
     <h1>เปลี่ยนชื่อคลิปตามยอดวิว</h1>
     <p class="sub">อัตโนมัติทุก 30 นาที <span class="muted">ไม่ต้องแตะเอง</span></p>
+    <p class="sub-en">
+      <b>ViewTitle</b> automatically updates your YouTube video title to show its
+      current view count &mdash; for example, <i>&ldquo;This video has 12,345 views&rdquo;</i>.
+      Connect your YouTube account once, choose a video, and ViewTitle keeps the
+      title up to date for you every 30 minutes.
+    </p>
     <div class="links">
       {% if user %}
         <a class="btn" href="{{ url_for('dashboard') }}">ไปที่แดชบอร์ด</a>
@@ -130,6 +155,45 @@
         <div class="feat"><div class="ic">🔄</div><h3>อัปเดตอัตโนมัติ</h3><p>ระบบดึงยอดวิวแล้วเปลี่ยนชื่อคลิปให้เองทุก 30 นาที</p></div>
         <div class="feat"><div class="ic">⚡️</div><h3>ประหยัดโควตา</h3><p>ถ้ายอดวิวไม่เปลี่ยน ระบบจะข้าม ไม่อัปเดตซ้ำให้เปลือง</p></div>
       </div>
+    </div>
+  </section>
+
+  <section class="about" id="about">
+    <div class="in">
+      <h2>About ViewTitle</h2>
+      <p>
+        <b>ViewTitle</b> is a small web app that keeps a YouTube video's title in sync
+        with how many views it has. Instead of editing the title by hand every time the
+        view count changes, ViewTitle does it for you on a schedule.
+      </p>
+
+      <h3>How it works</h3>
+      <ol>
+        <li>Sign in with your Google account (the one that owns the video).</li>
+        <li>Enter the ID of a video you own and choose a title format,
+            e.g. <code>This video has {views} views</code>.</li>
+        <li>Every 30 minutes ViewTitle reads the current view count and, if it changed,
+            updates that video's title. If nothing changed, it does nothing.</li>
+      </ol>
+
+      <h3>What data we access, and why</h3>
+      <p>
+        ViewTitle requests the <code>youtube.force-ssl</code> scope and uses it for
+        exactly two operations on videos <i>you</i> choose:
+      </p>
+      <ul>
+        <li><b>Read</b> the video's view count and current title
+            (<code>videos.list</code>) &mdash; so we know what to write.</li>
+        <li><b>Update</b> that video's title (<code>videos.update</code>) &mdash; the
+            core feature. Description, tags and category are preserved unchanged.</li>
+      </ul>
+      <p>
+        We do not read, modify, upload or delete anything else on your channel, and we
+        never sell or share your data. You can revoke access and permanently delete all
+        of your data at any time from the dashboard.
+        See our <a href="{{ url_for('privacy') }}">Privacy Policy</a> and
+        <a href="{{ url_for('terms') }}">Terms of Service</a>.
+      </p>
     </div>
   </section>
 
