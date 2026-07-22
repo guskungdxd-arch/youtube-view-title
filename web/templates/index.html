@@ -24,7 +24,8 @@
       justify-content:center; gap:34px; background:rgba(255,255,255,.8);
       backdrop-filter:saturate(180%) blur(20px); border-bottom:1px solid rgba(0,0,0,.06); font-size:.86rem;
     }
-    nav .brand { font-weight:700; color:var(--text); }
+    nav .brand { font-weight:700; color:var(--text); display:inline-flex; align-items:center; gap:7px; }
+    nav .brand img { border-radius:5px; display:block; }
     nav a { color:#000; opacity:.8; }
     nav a:hover { opacity:1; }
     @media (max-width:640px){ nav { gap:18px; font-size:.78rem; } nav .hide { display:none; } }
@@ -99,7 +100,10 @@
 </head>
 <body>
   <nav>
-    <span class="brand">ViewTitle</span>
+    <span class="brand">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="ViewTitle logo" width="22" height="22">
+      ViewTitle
+    </span>
     <a class="hide" href="#features">Features</a>
     <a class="hide" href="#about">About</a>
     {% if user %}<a href="{{ url_for('dashboard') }}">Dashboard</a>
