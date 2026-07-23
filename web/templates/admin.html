@@ -1,52 +1,116 @@
 <!doctype html>
-<html lang="th">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+    /* Applied before first paint so a stored theme never flashes the wrong palette. */
+    (function () {
+      try {
+        var t = localStorage.getItem('theme');
+        if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" sizes="any">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
   <title>Admin — ViewTitle</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap');
-    :root {
-      --text:#1d1d1f; --sub:#6e6e73; --blue:#0071e3; --bg:#fff; --bg2:#f5f5f7; --border:#d2d2d7;
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    /* Light palette — the default, and what a visitor with no stored choice sees. */
+    :root, :root[data-theme="light"] {
+      color-scheme:light;
+      --text:#1d1d1f; --sub:#6e6e73; --blue:#0071e3;
+      --bg:#fff; --bg2:#f5f5f7; --surface:#fff; --chip:#f5f5f7; --border:#d2d2d7;
+      --border-subtle:#f0f0f2;
+      --nav-bg:rgba(255,255,255,.8); --nav-border:rgba(0,0,0,.06); --nav-link:#000;
+      --btn-fg:#fff;
+      --shadow:0 2px 10px rgba(0,0,0,.04);
+      --green:#34c759;
+      --pill-on-bg:#e3f7e9; --pill-on-text:#1b7a33;
+      --pill-off-bg:#f0f0f2;
+      --icon-sun:block; --icon-moon:none;
+    }
+    /* Dark palette — only the variables change, never the rules that use them. */
+    @media (prefers-color-scheme:dark) {
+      :root:not([data-theme="light"]) {
+        color-scheme:dark;
+        --text:#f5f5f7; --sub:#a1a1a6; --blue:#0a84ff;
+        --bg:#000; --bg2:#111113; --surface:#1c1c1e; --chip:#2c2c2e; --border:#38383a;
+        --border-subtle:#2c2c2e;
+        --nav-bg:rgba(0,0,0,.72); --nav-border:rgba(255,255,255,.1); --nav-link:#f5f5f7;
+        --btn-fg:#fff;
+        --shadow:0 2px 10px rgba(0,0,0,.6);
+        --green:#30d158;
+        --pill-on-bg:rgba(48,209,88,.16); --pill-on-text:#30d158;
+        --pill-off-bg:#2c2c2e;
+        --icon-sun:none; --icon-moon:block;
+      }
+    }
+    :root[data-theme="dark"] {
+      color-scheme:dark;
+      --text:#f5f5f7; --sub:#a1a1a6; --blue:#0a84ff;
+      --bg:#000; --bg2:#111113; --surface:#1c1c1e; --chip:#2c2c2e; --border:#38383a;
+      --border-subtle:#2c2c2e;
+      --nav-bg:rgba(0,0,0,.72); --nav-border:rgba(255,255,255,.1); --nav-link:#f5f5f7;
+      --btn-fg:#fff;
+      --shadow:0 2px 10px rgba(0,0,0,.6);
+      --green:#30d158;
+      --pill-on-bg:rgba(48,209,88,.16); --pill-on-text:#30d158;
+      --pill-off-bg:#2c2c2e;
+      --icon-sun:none; --icon-moon:block;
     }
     * { box-sizing:border-box; margin:0; padding:0; }
-    body { font-family:"Noto Sans Thai",-apple-system,"SF Pro Display",sans-serif; color:var(--text);
-      background:var(--bg2); -webkit-font-smoothing:antialiased; }
+    body { font-family:"Inter",-apple-system,"SF Pro Display","Segoe UI",sans-serif; color:var(--text);
+      background:var(--bg2); -webkit-font-smoothing:antialiased; overflow-wrap:anywhere; }
     a { text-decoration:none; }
+    :focus-visible { outline:2px solid var(--blue); outline-offset:3px; border-radius:6px; }
     nav { position:sticky; top:0; z-index:50; height:48px; display:flex; align-items:center; gap:24px;
-      padding:0 24px; background:rgba(255,255,255,.8); backdrop-filter:saturate(180%) blur(20px);
-      border-bottom:1px solid rgba(0,0,0,.06); font-size:.86rem; }
-    nav .brand { font-weight:700; }
+      padding:0 24px; background:var(--nav-bg); backdrop-filter:saturate(180%) blur(20px);
+      border-bottom:1px solid var(--nav-border); font-size:.86rem; }
+    nav .brand { font-weight:700; color:var(--text); }
     nav .spacer { flex:1; }
-    nav a { color:#000; opacity:.8; } nav a:hover { opacity:1; }
+    nav a { color:var(--nav-link); opacity:.8; } nav a:hover { opacity:1; }
+
+    /* theme toggle */
+    .theme-toggle {
+      display:inline-grid; place-items:center; width:30px; height:30px; flex:none;
+      padding:0; border:0; border-radius:8px; background:transparent; color:var(--nav-link);
+      opacity:.8; cursor:pointer; font:inherit; -webkit-tap-highlight-color:transparent;
+    }
+    .theme-toggle:hover { opacity:1; background:var(--chip); }
+    .theme-toggle svg { display:block; }
+    .theme-toggle .sun { display:var(--icon-sun); }
+    .theme-toggle .moon { display:var(--icon-moon); }
 
     .wrap { max-width:1040px; margin:0 auto; padding:44px 24px 60px; }
     h1 { font-size:clamp(1.9rem,5vw,2.6rem); font-weight:700; letter-spacing:-.02em; }
     .lead { color:var(--sub); margin:10px 0 30px; }
 
     .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-bottom:26px; }
-    .stat { background:#fff; border-radius:20px; padding:26px; box-shadow:0 2px 10px rgba(0,0,0,.04); }
+    .stat { background:var(--surface); border-radius:20px; padding:26px; box-shadow:var(--shadow); }
     .stat .n { font-size:2.8rem; font-weight:700; letter-spacing:-.02em; line-height:1; }
     .stat.blue .n { color:var(--blue); }
-    .stat.green .n { color:#34c759; }
+    .stat.green .n { color:var(--green); }
     .stat .l { color:var(--sub); margin-top:8px; font-size:.92rem; }
     @media (max-width:680px){ .stats{ grid-template-columns:1fr; } }
 
-    .card { background:#fff; border-radius:22px; box-shadow:0 2px 10px rgba(0,0,0,.04); overflow:hidden; }
+    .card { background:var(--surface); border-radius:22px; box-shadow:var(--shadow); overflow:hidden; }
     .card h2 { padding:22px 26px 4px; font-size:1.15rem; font-weight:700; }
     .scroll { overflow-x:auto; padding:14px; }
     table { width:100%; border-collapse:collapse; font-size:.92rem; min-width:680px; }
     th { text-align:left; color:var(--sub); font-weight:600; padding:10px 14px; border-bottom:1px solid var(--border);
       font-size:.76rem; text-transform:uppercase; letter-spacing:.4px; }
-    td { padding:14px; border-bottom:1px solid #f0f0f2; vertical-align:middle; }
+    td { padding:14px; border-bottom:1px solid var(--border-subtle); vertical-align:middle; }
     tr:last-child td { border-bottom:0; }
     .who { display:flex; align-items:center; gap:10px; }
-    .av { width:32px; height:32px; border-radius:50%; background:var(--blue); color:#fff;
+    .av { width:32px; height:32px; border-radius:50%; background:var(--blue); color:var(--btn-fg);
       display:grid; place-items:center; font-size:.85rem; font-weight:600; flex-shrink:0; }
     code { background:var(--bg2); border:1px solid var(--border); padding:3px 8px; border-radius:7px; font-size:.82rem; }
     .pill { padding:4px 12px; border-radius:999px; font-size:.78rem; font-weight:600; white-space:nowrap; }
-    .on { background:#e3f7e9; color:#1b7a33; }
-    .off { background:#f0f0f2; color:var(--sub); }
+    .on { background:var(--pill-on-bg); color:var(--pill-on-text); }
+    .off { background:var(--pill-off-bg); color:var(--sub); }
     .muted { color:var(--sub); font-size:.85rem; }
     .empty { padding:44px; text-align:center; color:var(--sub); }
   </style>
@@ -55,38 +119,49 @@
   <nav>
     <span class="brand">ViewTitle <span class="muted" style="font-weight:400">/ admin</span></span>
     <span class="spacer"></span>
-    <a href="{{ url_for('dashboard') }}">แดชบอร์ดของฉัน</a>
-    <a href="{{ url_for('logout') }}">ออกจากระบบ</a>
+    <a href="{{ url_for('dashboard') }}">My dashboard</a>
+    <a href="{{ url_for('logout') }}">Log out</a>
+    <button class="theme-toggle" type="button" id="theme-toggle" aria-label="Switch to dark theme">
+      <svg class="sun" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4.2"/>
+        <path d="M12 2.4v2.2M12 19.4v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.4 12h2.2M19.4 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/>
+      </svg>
+      <svg class="moon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M20.5 13.4A8.4 8.4 0 1 1 10.6 3.5a6.6 6.6 0 0 0 9.9 9.9z"/>
+      </svg>
+    </button>
   </nav>
 
   <div class="wrap">
-    <h1>ภาพรวมผู้ใช้</h1>
-    <p class="lead">ดูว่ามีใครเข้ามาใช้ ตั้งคลิปอะไร และสถานะล่าสุดของแต่ละคน</p>
+    <h1>User overview</h1>
+    <p class="lead">See who has signed up, which videos they set, and each person's latest status.</p>
 
     <div class="stats">
-      <div class="stat blue"><div class="n">{{ stats.total }}</div><div class="l">ผู้ใช้ทั้งหมด</div></div>
-      <div class="stat green"><div class="n">{{ stats.active }}</div><div class="l">เปิดอัตโนมัติอยู่</div></div>
-      <div class="stat"><div class="n">{{ stats.configured }}</div><div class="l">ตั้งคลิปแล้ว</div></div>
+      <div class="stat blue"><div class="n">{{ stats.total }}</div><div class="l">Total users</div></div>
+      <div class="stat green"><div class="n">{{ stats.active }}</div><div class="l">Auto-update on</div></div>
+      <div class="stat"><div class="n">{{ stats.configured }}</div><div class="l">Video configured</div></div>
     </div>
 
     <div class="card">
-      <h2>รายชื่อผู้ใช้</h2>
+      <h2>User list</h2>
       <div class="scroll">
         {% if rows %}
         <table>
           <thead><tr>
-            <th>ผู้ใช้</th><th>Video ID</th><th>รูปแบบชื่อ</th><th>อัตโนมัติ</th><th>สถานะล่าสุด</th><th>อัปเดตเมื่อ</th>
+            <th>User</th><th>Video ID</th><th>Title format</th><th>Auto</th><th>Latest status</th><th>Updated</th>
           </tr></thead>
           <tbody>
             {% for r in rows %}
             <tr>
               <td><div class="who">
                 <div class="av">{{ (r['email'] or '?')[0]|upper }}</div>
-                <span>{{ r['email'] or '—' }}{% if me and r['sub']==me['sub'] %} <span class="muted">(คุณ)</span>{% endif %}</span>
+                <span>{{ r['email'] or '—' }}{% if me and r['sub']==me['sub'] %} <span class="muted">(you)</span>{% endif %}</span>
               </div></td>
               <td>{% if r['video_id'] %}<code>{{ r['video_id'] }}</code>{% else %}<span class="muted">—</span>{% endif %}</td>
               <td class="muted">{{ r['title_template'] or '—' }}</td>
-              <td><span class="pill {{ 'on' if r['enabled'] else 'off' }}">{{ 'เปิด' if r['enabled'] else 'ปิด' }}</span></td>
+              <td><span class="pill {{ 'on' if r['enabled'] else 'off' }}">{{ 'On' if r['enabled'] else 'Off' }}</span></td>
               <td>{{ r['last_status'] or '—' }}</td>
               <td class="muted">{{ r['updated_at'] or '—' }}</td>
             </tr>
@@ -94,10 +169,37 @@
           </tbody>
         </table>
         {% else %}
-        <div class="empty">ยังไม่มีผู้ใช้เข้ามาใช้งาน</div>
+        <div class="empty">No users yet.</div>
         {% endif %}
       </div>
     </div>
   </div>
+
+  <script>
+    (function () {
+      var root = document.documentElement;
+      var btn = document.getElementById('theme-toggle');
+      var mq = window.matchMedia('(prefers-color-scheme: dark)');
+
+      function resolved() {
+        var t = root.getAttribute('data-theme');
+        return (t === 'dark' || t === 'light') ? t : (mq.matches ? 'dark' : 'light');
+      }
+      function sync() {
+        var dark = resolved() === 'dark';
+        btn.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+        btn.title = dark ? 'Switch to light theme' : 'Switch to dark theme';
+      }
+      btn.addEventListener('click', function () {
+        var next = resolved() === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        try { localStorage.setItem('theme', next); } catch (e) {}
+        sync();
+      });
+      if (mq.addEventListener) mq.addEventListener('change', sync);
+      else if (mq.addListener) mq.addListener(sync);
+      sync();
+    })();
+  </script>
 </body>
 </html>

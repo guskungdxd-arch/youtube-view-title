@@ -14,6 +14,9 @@
       } catch (e) {}
     })();
   </script>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" sizes="any">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     /* Light palette — the default, and what a visitor with no stored choice sees. */
@@ -77,8 +80,9 @@
       width:22px; height:22px; border-radius:6px; background:var(--mark-bg);
       color:var(--mark-fg); display:grid; place-items:center; font-size:10px; line-height:1;
     }
-    nav a { color:var(--nav-link); opacity:.8; }
+    nav a { color:var(--nav-link); opacity:.8; transition:opacity .2s cubic-bezier(.2,.6,.2,1); }
     nav a:hover { opacity:1; }
+    nav a:active { opacity:.7; }
     @media (max-width:640px){ nav { gap:18px; font-size:.78rem; } }
 
     /* theme toggle */
@@ -86,8 +90,10 @@
       display:inline-grid; place-items:center; width:30px; height:30px; flex:none;
       padding:0; border:0; border-radius:8px; background:transparent; color:var(--nav-link);
       opacity:.8; cursor:pointer; font:inherit; -webkit-tap-highlight-color:transparent;
+      transition:opacity .2s cubic-bezier(.2,.6,.2,1), background .2s cubic-bezier(.2,.6,.2,1), transform .2s cubic-bezier(.2,.6,.2,1);
     }
     .theme-toggle:hover { opacity:1; background:var(--chip); }
+    .theme-toggle:active { transform:scale(.92); }
     .theme-toggle svg { display:block; }
     .theme-toggle .sun { display:var(--icon-sun); }
     .theme-toggle .moon { display:var(--icon-moon); }
@@ -108,10 +114,13 @@
       display:inline-flex; align-items:center; gap:9px; background:var(--btn-bg); color:var(--btn-fg);
       padding:11px 26px; border-radius:980px; font-size:1.02rem; font-weight:600; border:0;
       cursor:pointer; font-family:inherit;
+      transition:background .2s cubic-bezier(.2,.6,.2,1), transform .2s cubic-bezier(.2,.6,.2,1), box-shadow .2s cubic-bezier(.2,.6,.2,1);
     }
-    .btn:hover { background:var(--btn-bg-h); }
-    .textlink { color:var(--blue); font-size:1.02rem; font-weight:500; }
+    .btn:hover { background:var(--btn-bg-h); transform:translateY(-1px); box-shadow:0 8px 18px -8px rgba(0,113,227,.6); }
+    .btn:active { transform:translateY(0) scale(.98); box-shadow:none; }
+    .textlink { color:var(--blue); font-size:1.02rem; font-weight:500; transition:opacity .2s cubic-bezier(.2,.6,.2,1); }
     .textlink:hover { text-decoration:underline; }
+    .textlink:active { opacity:.7; }
 
     /* projects */
     .projects { background:var(--bg2); margin-top:66px; padding:70px 22px; }
@@ -128,9 +137,10 @@
     .card {
       display:flex; flex-direction:column; height:100%; background:var(--surface); border-radius:20px;
       padding:28px; color:var(--text); border:1px solid transparent;
-      transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+      transition:transform .24s cubic-bezier(.2,.6,.2,1), box-shadow .24s cubic-bezier(.2,.6,.2,1), border-color .24s cubic-bezier(.2,.6,.2,1);
     }
-    .card:hover { transform:translateY(-3px); box-shadow:var(--card-shadow); border-color:var(--border); }
+    .card:hover { transform:translateY(-4px); box-shadow:var(--card-shadow); border-color:var(--border); }
+    .card:active { transform:translateY(-1px) scale(.995); transition-duration:.1s; }
     .card .top { display:flex; align-items:center; gap:13px; }
     .card .logo { width:44px; height:44px; border-radius:11px; object-fit:cover; flex:none; background:var(--chip); display:block; }
     .card h3 { font-size:1.2rem; font-weight:700; letter-spacing:-.01em; }
@@ -158,14 +168,45 @@
 
     footer { text-align:center; color:var(--sub); font-size:.82rem; padding:30px 22px; border-top:1px solid var(--border); }
     footer a { color:var(--blue); margin:0 10px; }
+    footer a { transition:opacity .2s cubic-bezier(.2,.6,.2,1); }
+    footer a:hover { opacity:.7; }
+
+    /* Scroll/load reveals — content is visible by default and only opts into the
+       hidden start-state once the `anim` class is set (JS-supported, motion allowed). */
+    .anim .reveal { opacity:0; transform:translateY(18px);
+      transition:opacity .7s cubic-bezier(.2,.6,.2,1), transform .7s cubic-bezier(.2,.6,.2,1); }
+    .anim .reveal.in { opacity:1; transform:none; }
+    .anim .stagger > li { opacity:0; transform:translateY(18px);
+      transition:opacity .6s cubic-bezier(.2,.6,.2,1), transform .6s cubic-bezier(.2,.6,.2,1); }
+    .anim .stagger.in > li { opacity:1; transform:none; }
+    .anim .stagger.in > li:nth-child(1){ transition-delay:.03s; }
+    .anim .stagger.in > li:nth-child(2){ transition-delay:.09s; }
+    .anim .stagger.in > li:nth-child(3){ transition-delay:.15s; }
+    .anim .stagger.in > li:nth-child(4){ transition-delay:.21s; }
+    .anim .stagger.in > li:nth-child(5){ transition-delay:.27s; }
+    .anim .stagger.in > li:nth-child(6){ transition-delay:.33s; }
 
     @media (prefers-reduced-motion:reduce){
-      .card { transition:none; }
-      .card:hover { transform:none; }
+      .card, .btn, .textlink, .theme-toggle, nav a, footer a { transition:none; }
+      .card:hover, .btn:hover, .theme-toggle:active, .btn:active, .card:active { transform:none; box-shadow:none; }
+      .anim .reveal, .anim .stagger > li { opacity:1; transform:none; transition:none; }
     }
   </style>
 </head>
 <body>
+  <script>
+    /* Reveal guard: opt into motion only when IntersectionObserver exists and the
+       visitor allows motion. Runs before body content paints so nothing flashes
+       hidden-then-shown; if JS is off or unsupported, content stays fully visible. */
+    (function () {
+      try {
+        if ('IntersectionObserver' in window &&
+            !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          document.documentElement.classList.add('anim');
+        }
+      } catch (e) {}
+    })();
+  </script>
   <nav>
     <a class="brand" href="{{ url_for('home') }}">
       <span class="mark" aria-hidden="true">&#9654;</span>
@@ -187,7 +228,7 @@
     </button>
   </nav>
 
-  <header class="hero">
+  <header class="hero reveal">
     <span class="eyebrow">Builder &amp; YouTuber</span>
     <h1>I build nerdy software,<br>then explain how.</h1>
     <p class="sub">
@@ -204,11 +245,11 @@
 
   <main>
     <section class="projects" id="projects">
-      <h2>Projects</h2>
-      <p class="lede">Everything here is running in production, not a mockup.</p>
+      <h2 class="reveal">Projects</h2>
+      <p class="lede reveal">Everything here is running in production, not a mockup.</p>
 
       {% if projects %}
-        <ul class="cards{% if projects|length == 1 %} one{% elif projects|length == 2 %} two{% endif %}">
+        <ul class="cards stagger{% if projects|length == 1 %} one{% elif projects|length == 2 %} two{% endif %}">
           {% for project in projects %}
             <li>
               <a class="card" href="{{ project.url }}">
@@ -237,7 +278,7 @@
           {% endfor %}
         </ul>
       {% else %}
-        <div class="empty">
+        <div class="empty reveal">
           <strong>No projects published yet</strong>
           The next build is still in progress — check back soon.
         </div>
@@ -277,6 +318,22 @@
       if (mq.addEventListener) mq.addEventListener('change', sync);
       else if (mq.addListener) mq.addListener(sync);
       sync();
+    })();
+  </script>
+
+  <script>
+    /* Add `.in` as each revealed element scrolls into view; elements already in the
+       viewport (e.g. the hero) reveal immediately on load. No-op unless `.anim` is set. */
+    (function () {
+      if (!document.documentElement.classList.contains('anim')) return;
+      var els = document.querySelectorAll('.reveal, .stagger');
+      if (!els.length || !('IntersectionObserver' in window)) return;
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); }
+        });
+      }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+      els.forEach(function (el) { io.observe(el); });
     })();
   </script>
 </body>

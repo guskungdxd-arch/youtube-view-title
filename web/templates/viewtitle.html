@@ -14,6 +14,9 @@
       } catch (e) {}
     })();
   </script>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" sizes="any">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     /* Light palette — the default, and what a visitor with no stored choice sees. */
@@ -77,8 +80,9 @@
     }
     nav .brand { font-weight:700; color:var(--text); display:inline-flex; align-items:center; gap:8px; }
     nav .brand img { border-radius:6px; display:block; }
-    nav a { color:var(--nav-link); opacity:.8; }
+    nav a { color:var(--nav-link); opacity:.8; transition:opacity .2s cubic-bezier(.2,.6,.2,1); }
     nav a:hover { opacity:1; }
+    nav a:active { opacity:.7; }
     @media (max-width:640px){ nav { gap:18px; font-size:.78rem; } nav .hide { display:none; } }
 
     /* theme toggle */
@@ -86,8 +90,10 @@
       display:inline-grid; place-items:center; width:30px; height:30px; flex:none;
       padding:0; border:0; border-radius:8px; background:transparent; color:var(--nav-link);
       opacity:.8; cursor:pointer; font:inherit; -webkit-tap-highlight-color:transparent;
+      transition:opacity .2s cubic-bezier(.2,.6,.2,1), background .2s cubic-bezier(.2,.6,.2,1), transform .2s cubic-bezier(.2,.6,.2,1);
     }
     .theme-toggle:hover { opacity:1; background:var(--chip); }
+    .theme-toggle:active { transform:scale(.92); }
     .theme-toggle svg { display:block; }
     .theme-toggle .sun { display:var(--icon-sun); }
     .theme-toggle .moon { display:var(--icon-moon); }
@@ -112,10 +118,13 @@
       display:inline-flex; align-items:center; gap:9px; background:var(--btn-bg); color:var(--btn-fg);
       padding:11px 26px; border-radius:980px; font-size:1.02rem; font-weight:600; border:0;
       cursor:pointer; font-family:inherit;
+      transition:background .2s cubic-bezier(.2,.6,.2,1), transform .2s cubic-bezier(.2,.6,.2,1), box-shadow .2s cubic-bezier(.2,.6,.2,1);
     }
-    .btn:hover { background:var(--btn-bg-h); }
-    .textlink { color:var(--blue); font-size:1.02rem; font-weight:500; }
+    .btn:hover { background:var(--btn-bg-h); transform:translateY(-1px); box-shadow:0 8px 18px -8px rgba(0,113,227,.6); }
+    .btn:active { transform:translateY(0) scale(.98); box-shadow:none; }
+    .textlink { color:var(--blue); font-size:1.02rem; font-weight:500; transition:opacity .2s cubic-bezier(.2,.6,.2,1); }
     .textlink:hover { text-decoration:underline; }
+    .textlink:active { opacity:.7; }
 
     /* hero visual */
     .visual { max-width:860px; margin:52px auto 0; padding:0 22px; }
@@ -152,7 +161,9 @@
       grid-template-columns:repeat(3,1fr);
     }
     @media (max-width:840px){ .grid { grid-template-columns:1fr; max-width:520px; gap:14px; } }
-    .feat { background:var(--surface); border-radius:18px; padding:28px 26px; }
+    .feat { background:var(--surface); border-radius:18px; padding:28px 26px; border:1px solid transparent;
+      transition:transform .24s cubic-bezier(.2,.6,.2,1), box-shadow .24s cubic-bezier(.2,.6,.2,1), border-color .24s cubic-bezier(.2,.6,.2,1); }
+    .feat:hover { transform:translateY(-4px); box-shadow:var(--browser-shadow); border-color:var(--border); }
     .feat .ic {
       width:38px; height:38px; border-radius:11px; background:var(--chip);
       display:grid; place-items:center; color:var(--sub);
@@ -219,9 +230,43 @@
       .visual { margin-top:40px; padding:0 20px; }
       .browser .meta { padding:22px; }
     }
+
+    footer a { transition:opacity .2s cubic-bezier(.2,.6,.2,1); }
+    footer a:hover { opacity:.7; }
+
+    /* Scroll/load reveals — content is visible by default and only opts into the
+       hidden start-state once the `anim` class is set (JS-supported, motion allowed). */
+    .anim .reveal { opacity:0; transform:translateY(18px);
+      transition:opacity .7s cubic-bezier(.2,.6,.2,1), transform .7s cubic-bezier(.2,.6,.2,1); }
+    .anim .reveal.in { opacity:1; transform:none; }
+    .anim .stagger > * { opacity:0; transform:translateY(18px);
+      transition:opacity .6s cubic-bezier(.2,.6,.2,1), transform .6s cubic-bezier(.2,.6,.2,1); }
+    .anim .stagger.in > * { opacity:1; transform:none; }
+    .anim .stagger.in > *:nth-child(1){ transition-delay:.03s; }
+    .anim .stagger.in > *:nth-child(2){ transition-delay:.11s; }
+    .anim .stagger.in > *:nth-child(3){ transition-delay:.19s; }
+
+    @media (prefers-reduced-motion:reduce){
+      .btn, .textlink, .theme-toggle, nav a, footer a, .feat { transition:none; }
+      .btn:hover, .btn:active, .theme-toggle:active, .feat:hover { transform:none; box-shadow:none; }
+      .anim .reveal, .anim .stagger > * { opacity:1; transform:none; transition:none; }
+    }
   </style>
 </head>
 <body>
+  <script>
+    /* Reveal guard: opt into motion only when IntersectionObserver exists and the
+       visitor allows motion. Runs before body content paints so nothing flashes
+       hidden-then-shown; if JS is off or unsupported, content stays fully visible. */
+    (function () {
+      try {
+        if ('IntersectionObserver' in window &&
+            !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          document.documentElement.classList.add('anim');
+        }
+      } catch (e) {}
+    })();
+  </script>
   <nav>
     <span class="brand">
       <img src="{{ url_for('static', filename='logo.png') }}" alt="ViewTitle logo" width="22" height="22">
@@ -244,7 +289,7 @@
     </button>
   </nav>
 
-  <header class="hero">
+  <header class="hero reveal">
     <span class="eyebrow">YouTube title automation</span>
     <h1>ViewTitle</h1>
     <p class="tagline">Your video title, always showing its view count</p>
@@ -285,12 +330,12 @@
 
   <main>
     <section class="features" id="features">
-      <div class="section-head">
+      <div class="section-head reveal">
         <h2>Set it once, then forget it</h2>
         <p class="lede">Three things ViewTitle handles so you never touch the title again.</p>
       </div>
 
-      <div class="grid">
+      <div class="grid stagger">
         <div class="feat">
           <span class="ic" aria-hidden="true">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -331,14 +376,14 @@
 
     <section class="about" id="about">
       <div class="in">
-        <h2>About ViewTitle</h2>
-        <p class="lede">
+        <h2 class="reveal">About ViewTitle</h2>
+        <p class="lede reveal">
           ViewTitle is a small web app that keeps a YouTube video's title in sync with how
           many views it has. Instead of editing the title by hand every time the view count
           changes, ViewTitle does it for you on a schedule.
         </p>
 
-        <div class="block">
+        <div class="block reveal">
           <h3>How it works</h3>
           <ol class="steps" role="list">
             <li>Sign in with the Google account that owns the video.</li>
@@ -349,7 +394,7 @@
           </ol>
         </div>
 
-        <div class="block panel">
+        <div class="block panel reveal">
           <h3>What data we access, and why</h3>
           <p>
             ViewTitle requests the <code>youtube.force-ssl</code> scope and uses it for
@@ -368,7 +413,7 @@
           </p>
         </div>
 
-        <div class="block">
+        <div class="block reveal">
           <h3>Good to know</h3>
           <ul class="dotlist muted">
             <li>Updates run on a schedule (every 30 minutes), not in real time — YouTube's
@@ -418,6 +463,22 @@
       if (mq.addEventListener) mq.addEventListener('change', sync);
       else if (mq.addListener) mq.addListener(sync);
       sync();
+    })();
+  </script>
+
+  <script>
+    /* Add `.in` as each revealed element scrolls into view; elements already in the
+       viewport (e.g. the hero) reveal immediately on load. No-op unless `.anim` is set. */
+    (function () {
+      if (!document.documentElement.classList.contains('anim')) return;
+      var els = document.querySelectorAll('.reveal, .stagger');
+      if (!els.length || !('IntersectionObserver' in window)) return;
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); }
+        });
+      }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+      els.forEach(function (el) { io.observe(el); });
     })();
   </script>
 </body>
