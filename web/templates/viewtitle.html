@@ -97,6 +97,10 @@
     .theme-toggle svg { display:block; }
     .theme-toggle .sun { display:var(--icon-sun); }
     .theme-toggle .moon { display:var(--icon-moon); }
+    /* Cross-fade the page when the theme flips (View Transitions API; ignored where
+       unsupported, and skipped under reduced-motion by the toggle script). */
+    ::view-transition-old(root),
+    ::view-transition-new(root) { animation-duration:.34s; animation-timing-function:cubic-bezier(.2,.6,.2,1); }
 
     /* hero */
     .hero { text-align:center; padding:74px 22px 0; }
@@ -295,7 +299,7 @@
     <p class="tagline">Your video title, always showing its view count</p>
     <p class="sub">
       ViewTitle is a web app that automatically updates your YouTube video's title to
-      show how many views it currently has — for example, <i>"This video has 12,345
+      show how many views it currently has — for example, <i>"This video has 100,000
       views"</i>. Connect your YouTube account, pick a video you own, and ViewTitle
       keeps the title up to date for you. No manual editing, ever.
     </p>
@@ -320,7 +324,7 @@
           </div>
           <div class="meta">
             <span class="live"><span class="dot"></span>Last updated · just now</span>
-            <p class="title">This video has <span class="count">12,345</span> views</p>
+            <p class="title">This video has <span class="count">100,000</span> views</p>
             <p class="note">The title changes on its own as views grow</p>
           </div>
         </div>
@@ -456,9 +460,14 @@
       }
       btn.addEventListener('click', function () {
         var next = resolved() === 'dark' ? 'light' : 'dark';
-        root.setAttribute('data-theme', next);
         try { localStorage.setItem('theme', next); } catch (e) {}
-        sync();
+        var apply = function () { root.setAttribute('data-theme', next); sync(); };
+        if (document.startViewTransition &&
+            !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          document.startViewTransition(apply);
+        } else {
+          apply();
+        }
       });
       if (mq.addEventListener) mq.addEventListener('change', sync);
       else if (mq.addListener) mq.addListener(sync);

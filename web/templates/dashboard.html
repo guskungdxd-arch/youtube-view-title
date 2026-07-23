@@ -88,6 +88,10 @@
     .theme-toggle svg { display:block; }
     .theme-toggle .sun { display:var(--icon-sun); }
     .theme-toggle .moon { display:var(--icon-moon); }
+    /* Cross-fade the page when the theme flips (View Transitions API; ignored where
+       unsupported, and skipped under reduced-motion by the toggle script). */
+    ::view-transition-old(root),
+    ::view-transition-new(root) { animation-duration:.34s; animation-timing-function:cubic-bezier(.2,.6,.2,1); }
 
     .wrap { max-width:540px; margin:0 auto; padding:44px 22px 60px; }
     h1 { font-size:clamp(1.9rem,5vw,2.6rem); font-weight:700; letter-spacing:-.02em; text-align:center; }
@@ -212,9 +216,14 @@
       }
       btn.addEventListener('click', function () {
         var next = resolved() === 'dark' ? 'light' : 'dark';
-        root.setAttribute('data-theme', next);
         try { localStorage.setItem('theme', next); } catch (e) {}
-        sync();
+        var apply = function () { root.setAttribute('data-theme', next); sync(); };
+        if (document.startViewTransition &&
+            !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          document.startViewTransition(apply);
+        } else {
+          apply();
+        }
       });
       if (mq.addEventListener) mq.addEventListener('change', sync);
       else if (mq.addListener) mq.addListener(sync);

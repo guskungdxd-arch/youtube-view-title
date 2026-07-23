@@ -97,6 +97,13 @@ def digit(d, w=1.0, h=1.0):
         p = [(0.94, 0.02), (0.08, 0.02), (0.08, 0.42)]
         p += arc(0.47, 0.69, 0.47, 0.31, 219, 530, 44)
         return _scale([p], w, h)
+    if d == "6":
+        # a 6 is the 9 turned 180deg about the cell centre — reuse its exact bowl
+        # and stem so 6 and 7 carry the weight the mark was already tuned for.
+        return _scale(
+            [[(1.0 - x, 1.0 - y) for (x, y) in path] for path in digit("9")],
+            w, h,
+        )
     if d == "7":
         return _scale([[(0.03, 0.02), (0.97, 0.02), (0.36, 1.0)]], w, h)
     if d == "8":
@@ -215,7 +222,8 @@ VARIANTS = {
     # still read at 22px; the seam is only 1.6% of the side, so it reads as a
     # flip-clock hinge from ~40px up and resolves away at nav size instead of
     # chewing a hole in the digits.
-    "final":     _base(),
+    "count67":   _base(digits=("6", "7")),   # THE SHIPPED MARK — counting readout "67"
+    "final":     _base(),                     # earlier "12" mark, kept for history
     # explored and rejected, kept as starting points if the mark is revisited
     "final-air": _base(cap_h=0.45, weight=0.112, gap=0.105),  # airier, weaker at 22px
     "flat":      _base(plate="flat", seam=0),                 # no flip-card cue
@@ -225,7 +233,7 @@ VARIANTS = {
     "zero-nine": _base(digits=("0", "9")),   # counters close up at 22px
 }
 
-DEFAULT_VARIANT = "final"
+DEFAULT_VARIANT = "count67"
 
 
 def seam_line(img, S, thickness, radius_frac=RADIUS):
