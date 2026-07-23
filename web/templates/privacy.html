@@ -17,66 +17,132 @@
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    /* Light palette — the default, and what a visitor with no stored choice sees. */
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=VT323&display=swap');
+
+    /* ── Light palette: "ARCADE DAY" ── */
     :root, :root[data-theme="light"]{
       color-scheme:light;
-      --text:#1d1d1f;--sub:#6e6e73;--body:#3a3a3c;--blue:#0071e3;
-      --bg:#fff;--bg2:#f5f5f7;--raised:#f5f5f7;--chip:#f5f5f7;--border:#d2d2d7;
-      --nav-bg:rgba(255,255,255,.8);--nav-border:rgba(0,0,0,.06);--nav-link:#1d1d1f;
-      --icon-sun:block;--icon-moon:none;
+      --text:#201c28; --sub:#4a4436;
+      --bg:#ded6bb; --bg2:#cdc4a4; --surface:#f2ecd8; --chip:#e4dcc0;
+      --border:#201c28; --shadow:#201c28;
+      --accent:#2b45c4; --accent-ink:#f4efdc; --link:#2b45c4; --hot:#d61f4e;
+      --nav-bg:#e8e1c8; --dither:rgba(32,28,40,.09);
+      --display:"Press Start 2P",monospace; --label:"Silkscreen",monospace;
+      --icon-sun:block; --icon-moon:none;
     }
-    /* Dark palette — only the variables change, never the rules that use them. */
+    /* ── Dark palette: "NIGHT CRT" ── */
     @media (prefers-color-scheme:dark){
       :root:not([data-theme="light"]){
         color-scheme:dark;
-        --text:#f5f5f7;--sub:#a1a1a6;--body:#d1d1d6;--blue:#0a84ff;
-        --bg:#000;--bg2:#111113;--raised:#1c1c1e;--chip:#2c2c2e;--border:#38383a;
-        --nav-bg:rgba(0,0,0,.72);--nav-border:rgba(255,255,255,.1);--nav-link:#f5f5f7;
-        --icon-sun:none;--icon-moon:block;
+        --text:#8ef2b0; --sub:#57bd82;
+        --bg:#070d09; --bg2:#0b130e; --surface:#0f1a14; --chip:#12241a;
+        --border:#2f6b47; --shadow:#1b4d30;
+        --accent:#ffd24a; --accent-ink:#08130c; --link:#ffd24a; --hot:#ff5c72;
+        --nav-bg:#0a120c; --dither:rgba(120,240,160,.06);
+        --display:"Press Start 2P",monospace; --label:"Silkscreen",monospace;
+        --icon-sun:none; --icon-moon:block;
       }
     }
     :root[data-theme="dark"]{
       color-scheme:dark;
-      --text:#f5f5f7;--sub:#a1a1a6;--body:#d1d1d6;--blue:#0a84ff;
-      --bg:#000;--bg2:#111113;--raised:#1c1c1e;--chip:#2c2c2e;--border:#38383a;
-      --nav-bg:rgba(0,0,0,.72);--nav-border:rgba(255,255,255,.1);--nav-link:#f5f5f7;
-      --icon-sun:none;--icon-moon:block;
+      --text:#8ef2b0; --sub:#57bd82;
+      --bg:#070d09; --bg2:#0b130e; --surface:#0f1a14; --chip:#12241a;
+      --border:#2f6b47; --shadow:#1b4d30;
+      --accent:#ffd24a; --accent-ink:#08130c; --link:#ffd24a; --hot:#ff5c72;
+      --nav-bg:#0a120c; --dither:rgba(120,240,160,.06);
+      --display:"Press Start 2P",monospace; --label:"Silkscreen",monospace;
+      --icon-sun:none; --icon-moon:block;
     }
-    *{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:"Inter",-apple-system,sans-serif;color:var(--text);background:var(--bg);line-height:1.7;-webkit-font-smoothing:antialiased;}
-    :focus-visible{outline:2px solid var(--blue);outline-offset:3px;border-radius:6px;}
-    nav{height:48px;display:flex;align-items:center;gap:16px;padding:0 24px;background:var(--nav-bg);backdrop-filter:blur(20px);border-bottom:1px solid var(--nav-border);font-size:.86rem;position:sticky;top:0;}
-    nav a{color:var(--blue);text-decoration:none;font-weight:600;transition:opacity .2s cubic-bezier(.2,.6,.2,1);}
-    nav a:hover{opacity:.75;}
-    nav a:active{opacity:.6;}
-    .theme-toggle{margin-left:auto;display:inline-grid;place-items:center;width:30px;height:30px;flex:none;padding:0;border:0;border-radius:8px;background:transparent;color:var(--nav-link);opacity:.8;cursor:pointer;font:inherit;-webkit-tap-highlight-color:transparent;transition:opacity .2s cubic-bezier(.2,.6,.2,1),background .2s cubic-bezier(.2,.6,.2,1),transform .2s cubic-bezier(.2,.6,.2,1);}
-    .theme-toggle:hover{opacity:1;background:var(--chip);}
-    .theme-toggle:active{transform:scale(.92);}
+
+    *{box-sizing:border-box; margin:0; padding:0;}
+    html{-webkit-text-size-adjust:100%;}
+    body{
+      font-family:"VT323",ui-monospace,"Courier New",monospace;
+      font-size:1.28rem; line-height:1.42; color:var(--text); background:var(--bg);
+      background-image:
+        linear-gradient(45deg,var(--dither) 25%,transparent 25% 75%,var(--dither) 75%),
+        linear-gradient(45deg,var(--dither) 25%,transparent 25% 75%,var(--dither) 75%);
+      background-size:6px 6px; background-position:0 0,3px 3px;
+      overflow-wrap:anywhere; overflow-x:hidden;
+    }
+    a{text-decoration:none;}
+    :focus-visible{outline:3px solid var(--accent); outline-offset:2px;}
+    ::selection{background:var(--accent); color:var(--accent-ink);}
+
+    /* ── nav: blocky, hard bottom border ── */
+    nav{
+      position:sticky; top:0; z-index:50; min-height:54px; display:flex; align-items:center;
+      justify-content:center; gap:18px; flex-wrap:wrap; padding:8px 16px;
+      background:var(--nav-bg); border-bottom:3px solid var(--border);
+      font-family:var(--label); font-size:.62rem; letter-spacing:.03em; text-transform:uppercase;
+    }
+    nav .brand{display:inline-flex; align-items:center; gap:10px; color:var(--text); font-weight:700;}
+    nav .mark{
+      width:26px; height:26px; flex:none; display:grid; place-items:center;
+      background:var(--accent); color:var(--accent-ink); border:2px solid var(--border);
+      box-shadow:2px 2px 0 var(--shadow); font-size:.6rem; line-height:1;
+    }
+    nav a{color:var(--text); position:relative; padding:3px 1px;}
+    nav a:not(.brand):hover{color:var(--link);}
+    nav a:not(.brand):hover::after{
+      content:""; position:absolute; left:0; right:0; bottom:-3px; height:2px; background:var(--link);
+    }
+    nav a:active{transform:translateY(1px);}
+
+    /* ── theme toggle: pixel button ── */
+    .theme-toggle{
+      display:inline-grid; place-items:center; width:34px; height:30px; flex:none; padding:0;
+      background:var(--surface); color:var(--text); border:2px solid var(--border);
+      box-shadow:2px 2px 0 var(--shadow); cursor:pointer; font:inherit; -webkit-tap-highlight-color:transparent;
+    }
+    .theme-toggle:hover{color:var(--link);}
+    .theme-toggle:active{transform:translate(2px,2px); box-shadow:none;}
     .theme-toggle svg{display:block;}
     .theme-toggle .sun{display:var(--icon-sun);}
     .theme-toggle .moon{display:var(--icon-moon);}
-    ::view-transition-old(root),::view-transition-new(root){animation-duration:.34s;animation-timing-function:cubic-bezier(.2,.6,.2,1);}
-    .wrap{max-width:720px;margin:0 auto;padding:48px 24px 80px;}
-    h1{font-size:2.2rem;font-weight:700;letter-spacing:-.02em;margin-bottom:6px;}
-    .date{color:var(--sub);margin-bottom:32px;}
-    h2{font-size:1.25rem;font-weight:700;margin:32px 0 10px;}
-    p,li{color:var(--body);}
-    ul{padding-left:22px;margin:8px 0;} li{margin:6px 0;}
-    .box{background:var(--raised);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin:16px 0;}
-    a{color:var(--blue);transition:opacity .2s cubic-bezier(.2,.6,.2,1);}
-    .wrap a:hover{opacity:.75;text-decoration:underline;}
-    code{background:var(--chip);padding:2px 7px;border-radius:6px;font-size:.9em;}
+    ::view-transition-old(root),::view-transition-new(root){animation-duration:.2s; animation-timing-function:steps(4,end);}
 
-    /* Gentle load reveal — content is visible by default and only opts into the
-       hidden start-state once the `anim` class is set (JS-supported, motion allowed). */
-    .anim .reveal{opacity:0;transform:translateY(16px);transition:opacity .7s cubic-bezier(.2,.6,.2,1),transform .7s cubic-bezier(.2,.6,.2,1);}
-    .anim .reveal.in{opacity:1;transform:none;}
+    /* ── document ── */
+    .wrap{max-width:760px; margin:0 auto; padding:44px 20px 84px;}
+    h1{
+      font-family:var(--display); font-size:clamp(1.05rem,4.6vw,1.8rem); line-height:1.3;
+      color:var(--text); margin-bottom:16px; padding-bottom:16px;
+      border-bottom:3px solid var(--border); text-transform:uppercase;
+    }
+    .date{
+      font-family:var(--label); font-size:.66rem; text-transform:uppercase; letter-spacing:.08em;
+      color:var(--sub); margin:-4px 0 30px;
+    }
+    h2{
+      font-family:var(--label); font-weight:700; font-size:.92rem; text-transform:uppercase;
+      letter-spacing:.02em; color:var(--text); margin:34px 0 10px;
+      display:flex; align-items:flex-start; gap:9px;
+    }
+    h2::before{content:""; width:11px; height:11px; margin-top:3px; flex:none; background:var(--accent); border:2px solid var(--border);}
+    p,li{color:var(--text);}
+    p{margin:10px 0;}
+    ul{padding-left:24px; margin:10px 0;} li{margin:6px 0;}
+    ul li::marker{content:"▸ "; color:var(--accent);}
+    b{font-weight:700;}
+    .box{
+      background:var(--surface); border:3px solid var(--border); box-shadow:5px 5px 0 var(--shadow);
+      padding:18px 20px; margin:20px 0;
+    }
+    code{
+      font-family:"VT323",monospace; background:var(--chip); border:2px solid var(--border);
+      padding:0 7px; font-size:1em;
+    }
+    a{color:var(--link);}
+    .wrap a:hover{color:var(--hot); text-decoration:underline;}
+
+    /* ── gentle reveal (visible by default; opts in only when `.anim` is set) ── */
+    .anim .reveal{opacity:0; transform:translateY(14px); transition:opacity .5s steps(6,end), transform .5s steps(6,end);}
+    .anim .reveal.in{opacity:1; transform:none;}
 
     @media (prefers-reduced-motion:reduce){
       nav a,.theme-toggle,.wrap a{transition:none;}
-      .theme-toggle:active{transform:none;}
-      .anim .reveal{opacity:1;transform:none;transition:none;}
+      .theme-toggle:active,nav a:active{transform:none;}
+      .anim .reveal{opacity:1; transform:none; transition:none;}
     }
   </style>
 </head>
@@ -95,7 +161,8 @@
     })();
   </script>
   <nav>
-    <a href="{{ url_for('viewtitle') }}">&lsaquo; Back to home</a>
+    <a class="brand" href="{{ url_for('home') }}"><span class="mark" aria-hidden="true">67</span>Build Log</a>
+    <a href="{{ url_for('viewtitle') }}">&lsaquo; ViewTitle</a>
     <button class="theme-toggle" type="button" id="theme-toggle" aria-label="Switch to dark theme">
       <svg class="sun" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
            stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
