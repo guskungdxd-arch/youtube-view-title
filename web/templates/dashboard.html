@@ -17,129 +17,278 @@
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
   <title>Dashboard — ViewTitle</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    /* Light palette — the default, and what a visitor with no stored choice sees. */
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=VT323&display=swap');
+
+    /* ── Light palette: "ARCADE DAY" — aged cabinet plastic, ink, cobalt + red ── */
     :root, :root[data-theme="light"] {
       color-scheme:light;
-      --text:#1d1d1f; --sub:#6e6e73; --blue:#0071e3; --blue-h:#0077ed;
-      --bg:#fff; --bg2:#f5f5f7; --surface:#fff; --chip:#f5f5f7; --border:#d2d2d7;
-      --nav-bg:rgba(255,255,255,.8); --nav-border:rgba(0,0,0,.06); --nav-link:#000;
-      --btn-fg:#fff;
-      --shadow:0 2px 10px rgba(0,0,0,.04);
-      --focus-ring:rgba(0,113,227,.15);
-      --flash-bg:#e8f5e9; --flash-border:#a5d6a7; --flash-text:#1b5e20;
-      --green:#34c759;
-      --toggle-off:#e5e5ea; --toggle-knob:#fff;
-      --danger:#d70015;
+      --text:#201c28; --sub:#4a4436;
+      --bg:#ded6bb; --bg2:#cdc4a4; --surface:#f2ecd8; --chip:#e4dcc0;
+      --border:#201c28; --shadow:#201c28;
+      --accent:#2b45c4; --accent-ink:#f4efdc; --accent-h:#182c93;
+      --link:#2b45c4; --hot:#d61f4e; --hot-ink:#a8103a;
+      --green:#1c7a34;
+      --nav-bg:#e8e1c8; --rule:#b5ac8d;
+      --dither:rgba(32,28,40,.09);
+      --display:"Press Start 2P",monospace; --label:"Silkscreen",monospace;
+      /* the status read-out is a little CRT monitor — dark in BOTH themes */
+      --screen-bg:#0b0f0a; --screen-panel:#141a12; --screen-fg:#ffc233; --screen-cap:#d8b869;
       --icon-sun:block; --icon-moon:none;
     }
-    /* Dark palette — only the variables change, never the rules that use them. */
+    /* ── Dark palette: "NIGHT CRT" — green phosphor on black, amber interactive ── */
     @media (prefers-color-scheme:dark) {
       :root:not([data-theme="light"]) {
         color-scheme:dark;
-        --text:#f5f5f7; --sub:#a1a1a6; --blue:#0a84ff; --blue-h:#409cff;
-        --bg:#000; --bg2:#111113; --surface:#1c1c1e; --chip:#2c2c2e; --border:#38383a;
-        --nav-bg:rgba(0,0,0,.72); --nav-border:rgba(255,255,255,.1); --nav-link:#f5f5f7;
-        --btn-fg:#fff;
-        --shadow:0 2px 10px rgba(0,0,0,.6);
-        --focus-ring:rgba(10,132,255,.35);
-        --flash-bg:rgba(48,209,88,.16); --flash-border:rgba(48,209,88,.4); --flash-text:#30d158;
-        --green:#30d158;
-        --toggle-off:#3a3a3c; --toggle-knob:#fff;
-        --danger:#ff453b;
+        --text:#8ef2b0; --sub:#57bd82;
+        --bg:#070d09; --bg2:#0b130e; --surface:#0f1a14; --chip:#12241a;
+        --border:#2f6b47; --shadow:#1b4d30;
+        --accent:#ffd24a; --accent-ink:#08130c; --accent-h:#ffe27a;
+        --link:#ffd24a; --hot:#ff5c72; --hot-ink:#ff5c72;
+        --green:#4ce07a;
+        --nav-bg:#0a120c; --rule:#22503a;
+        --dither:rgba(120,240,160,.06);
+        --display:"Press Start 2P",monospace; --label:"Silkscreen",monospace;
+        --screen-bg:#0b0f0a; --screen-panel:#141a12; --screen-fg:#ffc233; --screen-cap:#d8b869;
         --icon-sun:none; --icon-moon:block;
       }
     }
     :root[data-theme="dark"] {
       color-scheme:dark;
-      --text:#f5f5f7; --sub:#a1a1a6; --blue:#0a84ff; --blue-h:#409cff;
-      --bg:#000; --bg2:#111113; --surface:#1c1c1e; --chip:#2c2c2e; --border:#38383a;
-      --nav-bg:rgba(0,0,0,.72); --nav-border:rgba(255,255,255,.1); --nav-link:#f5f5f7;
-      --btn-fg:#fff;
-      --shadow:0 2px 10px rgba(0,0,0,.6);
-      --focus-ring:rgba(10,132,255,.35);
-      --flash-bg:rgba(48,209,88,.16); --flash-border:rgba(48,209,88,.4); --flash-text:#30d158;
-      --green:#30d158;
-      --toggle-off:#3a3a3c; --toggle-knob:#fff;
-      --danger:#ff453b;
+      --text:#8ef2b0; --sub:#57bd82;
+      --bg:#070d09; --bg2:#0b130e; --surface:#0f1a14; --chip:#12241a;
+      --border:#2f6b47; --shadow:#1b4d30;
+      --accent:#ffd24a; --accent-ink:#08130c; --accent-h:#ffe27a;
+      --link:#ffd24a; --hot:#ff5c72; --hot-ink:#ff5c72;
+      --green:#4ce07a;
+      --nav-bg:#0a120c; --rule:#22503a;
+      --dither:rgba(120,240,160,.06);
+      --display:"Press Start 2P",monospace; --label:"Silkscreen",monospace;
+      --screen-bg:#0b0f0a; --screen-panel:#141a12; --screen-fg:#ffc233; --screen-cap:#d8b869;
       --icon-sun:none; --icon-moon:block;
     }
-    * { box-sizing:border-box; margin:0; padding:0; }
-    body { font-family:"Inter",-apple-system,"SF Pro Display","Segoe UI",sans-serif; color:var(--text);
-      background:var(--bg2); -webkit-font-smoothing:antialiased; overflow-wrap:anywhere; }
-    a { text-decoration:none; }
-    :focus-visible { outline:2px solid var(--blue); outline-offset:3px; border-radius:6px; }
-    nav {
-      position:sticky; top:0; z-index:50; height:48px; display:flex; align-items:center; justify-content:center;
-      gap:24px; background:var(--nav-bg); backdrop-filter:saturate(180%) blur(20px);
-      border-bottom:1px solid var(--nav-border); font-size:.86rem;
-    }
-    nav .brand { font-weight:700; color:var(--text); }
-    nav a { color:var(--nav-link); opacity:.8; } nav a:hover { opacity:1; }
-    nav .spacer { flex:1; }
 
-    /* theme toggle */
-    .theme-toggle {
-      display:inline-grid; place-items:center; width:30px; height:30px; flex:none;
-      padding:0; border:0; border-radius:8px; background:transparent; color:var(--nav-link);
-      opacity:.8; cursor:pointer; font:inherit; -webkit-tap-highlight-color:transparent;
+    * { box-sizing:border-box; margin:0; padding:0; }
+    html { -webkit-text-size-adjust:100%; }
+    body {
+      font-family:"VT323",ui-monospace,"Courier New",monospace;
+      font-size:1.28rem; line-height:1.42;
+      color:var(--text); background:var(--bg);
+      background-image:
+        linear-gradient(45deg, var(--dither) 25%, transparent 25% 75%, var(--dither) 75%),
+        linear-gradient(45deg, var(--dither) 25%, transparent 25% 75%, var(--dither) 75%);
+      background-size:6px 6px; background-position:0 0, 3px 3px;
+      overflow-wrap:anywhere; overflow-x:hidden;
     }
-    .theme-toggle:hover { opacity:1; background:var(--chip); }
+    a { text-decoration:none; }
+    :focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+    ::selection { background:var(--accent); color:var(--accent-ink); }
+
+    /* ── nav: blocky, hard bottom border, no blur ── */
+    nav {
+      position:sticky; top:0; z-index:50; min-height:54px; display:flex; align-items:center;
+      gap:16px; flex-wrap:wrap; padding:8px 16px;
+      background:var(--nav-bg); border-bottom:3px solid var(--border);
+      font-family:var(--label); font-size:.62rem; letter-spacing:.03em; text-transform:uppercase;
+    }
+    nav .brand { display:inline-flex; align-items:center; gap:10px; color:var(--text); font-weight:700; }
+    nav .mark {
+      width:26px; height:26px; flex:none; display:grid; place-items:center;
+      background:var(--accent); color:var(--accent-ink); border:2px solid var(--border);
+      box-shadow:2px 2px 0 var(--shadow); font-size:.6rem; line-height:1;
+    }
+    nav .spacer { flex:1; }
+    nav a { color:var(--text); position:relative; padding:3px 1px; }
+    nav a:not(.brand):hover { color:var(--link); }
+    nav a:not(.brand):hover::after {
+      content:""; position:absolute; left:0; right:0; bottom:-3px; height:2px; background:var(--link);
+    }
+    nav a:active { transform:translateY(1px); }
+    /* signed-in identity: data, so VT323 rather than Silkscreen */
+    nav .who {
+      font-family:"VT323",monospace; font-size:1.02rem; text-transform:none; letter-spacing:0;
+      color:var(--text); background:var(--chip); border:2px solid var(--border);
+      padding:1px 8px; max-width:min(100%,15rem);
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    }
+    @media (max-width:620px) {
+      nav { justify-content:center; gap:12px; }
+      nav .spacer { display:none; }
+    }
+
+    /* ── theme toggle: pixel button ── */
+    .theme-toggle {
+      display:inline-grid; place-items:center; width:34px; height:30px; flex:none; padding:0;
+      background:var(--surface); color:var(--text); border:2px solid var(--border);
+      box-shadow:2px 2px 0 var(--shadow); cursor:pointer; font:inherit;
+      -webkit-tap-highlight-color:transparent;
+    }
+    .theme-toggle:hover { color:var(--link); }
+    .theme-toggle:active { transform:translate(2px,2px); box-shadow:none; }
     .theme-toggle svg { display:block; }
     .theme-toggle .sun { display:var(--icon-sun); }
     .theme-toggle .moon { display:var(--icon-moon); }
-    /* Cross-fade the page when the theme flips (View Transitions API; ignored where
-       unsupported, and skipped under reduced-motion by the toggle script). */
     ::view-transition-old(root),
-    ::view-transition-new(root) { animation-duration:.34s; animation-timing-function:cubic-bezier(.2,.6,.2,1); }
+    ::view-transition-new(root) { animation-duration:.2s; animation-timing-function:steps(4,end); }
 
-    .wrap { max-width:540px; margin:0 auto; padding:44px 22px 60px; }
-    h1 { font-size:clamp(1.9rem,5vw,2.6rem); font-weight:700; letter-spacing:-.02em; text-align:center; }
-    .lead { color:var(--sub); text-align:center; margin:10px 0 30px; }
-
-    .flash { background:var(--flash-bg); border:1px solid var(--flash-border); color:var(--flash-text); padding:12px 16px;
-      border-radius:14px; margin-bottom:20px; font-weight:500; text-align:center; }
-
-    .card { background:var(--surface); border-radius:22px; padding:30px; box-shadow:var(--shadow); }
-    label { display:block; font-weight:600; margin:20px 0 8px; font-size:.98rem; }
-    label:first-child { margin-top:0; }
-    .hint { color:var(--sub); font-weight:400; font-size:.84rem; }
-    input[type=text] {
-      width:100%; padding:13px 15px; border-radius:12px; border:1px solid var(--border);
-      background:var(--surface); color:var(--text); font-size:1rem; font-family:inherit;
+    /* ── page head ── */
+    .wrap { max-width:620px; margin:0 auto; padding:38px 18px 64px; }
+    .page-head { text-align:center; margin-bottom:26px; }
+    .kicker {
+      display:inline-block; font-family:var(--label); font-size:.62rem; font-weight:700;
+      letter-spacing:.12em; text-transform:uppercase; color:var(--accent-ink);
+      background:var(--accent); border:2px solid var(--border); box-shadow:3px 3px 0 var(--shadow);
+      padding:6px 10px; margin-bottom:20px;
     }
-    input[type=text]:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 4px var(--focus-ring); }
+    h1 {
+      font-family:var(--display); font-size:clamp(.98rem,4.6vw,1.7rem); line-height:1.5;
+      text-transform:uppercase; color:var(--text);
+    }
+    .lead { color:var(--sub); margin:16px auto 0; max-width:40ch; font-size:1.3rem; line-height:1.32; }
 
-    .switch { display:flex; align-items:center; gap:14px; margin-top:24px; padding:16px;
-      border:1px solid var(--border); border-radius:14px; background:var(--bg2); }
-    .switch label { margin:0; }
-    .switch input { width:50px; height:30px; appearance:none; background:var(--toggle-off); border-radius:999px;
-      position:relative; cursor:pointer; transition:.25s; flex-shrink:0; }
+    /* ── flash banner: pixel notice with a stamped cap ── */
+    .flash {
+      display:flex; align-items:stretch; gap:0; margin-bottom:18px;
+      background:var(--chip); border:3px solid var(--border); box-shadow:5px 5px 0 var(--shadow);
+    }
+    .flash .cap {
+      flex:none; display:grid; place-items:center; width:42px; padding:8px 0;
+      background:var(--green); color:var(--accent-ink);
+      border-right:3px solid var(--border); font-family:var(--label); font-size:.8rem;
+    }
+    .flash .msg { padding:9px 14px; color:var(--text); min-width:0; }
+    /* Error variant — app.py flashes uncategorised strings today, so the OK cap is what
+       renders; this keeps the red banner ready if a category is ever passed through. */
+    .flash.err .cap { background:var(--hot-ink); color:var(--accent-ink); }
+
+    /* ── the settings console ── */
+    .panel { background:var(--surface); border:3px solid var(--border); box-shadow:6px 6px 0 var(--shadow); }
+    .panel-bar {
+      display:flex; align-items:center; gap:8px; padding:8px 12px;
+      background:var(--bg2); border-bottom:3px solid var(--border);
+      font-family:var(--label); font-size:.56rem; text-transform:uppercase; letter-spacing:.06em; color:var(--sub);
+    }
+    .panel-bar .dot { width:12px; height:12px; flex:none; border:2px solid var(--border); }
+    .panel-bar .dot.a { background:var(--hot); }
+    .panel-bar .dot.b { background:var(--screen-fg); }
+    .panel-bar .dot.c { background:var(--green); }
+    .panel-bar .title { margin-left:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .panel-body { padding:24px 22px 26px; }
+
+    /* ── form fields ── */
+    .field { margin-bottom:22px; }
+    label {
+      display:block; font-family:var(--label); font-weight:700; font-size:.72rem;
+      text-transform:uppercase; letter-spacing:.05em; color:var(--text);
+    }
+    .hint { color:var(--sub); font-size:1.18rem; line-height:1.3; margin:6px 0 9px; }
+    code {
+      font-family:"VT323",ui-monospace,monospace; font-size:1em; color:var(--text);
+      background:var(--chip); border:2px solid var(--border); padding:0 6px;
+    }
+    input[type=text] {
+      display:block; width:100%; padding:10px 12px; border:3px solid var(--border);
+      background:var(--chip); color:var(--text);
+      font-family:"VT323",ui-monospace,monospace; font-size:1.28rem; line-height:1.2;
+      box-shadow:inset 3px 3px 0 rgba(0,0,0,.06);
+    }
+    input[type=text]::placeholder { color:var(--sub); opacity:1; }
+    input[type=text]:hover { border-color:var(--accent); }
+    input[type=text]:focus {
+      outline:3px solid var(--accent); outline-offset:2px;
+      border-color:var(--accent); background:var(--surface); box-shadow:none;
+    }
+
+    /* ── pixel toggle switch ── */
+    .switch {
+      display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+      padding:16px; background:var(--bg2); border:3px solid var(--border);
+    }
+    .switch input {
+      appearance:none; -webkit-appearance:none; flex:none; position:relative; cursor:pointer;
+      width:60px; height:30px; margin:0; background:var(--chip);
+      border:3px solid var(--border); box-shadow:3px 3px 0 var(--shadow);
+    }
+    .switch input::after {
+      content:""; position:absolute; top:0; left:0; width:24px; height:24px;
+      background:var(--sub); transition:transform .12s steps(3,end), background .12s steps(3,end);
+    }
     .switch input:checked { background:var(--green); }
-    .switch input::after { content:""; position:absolute; top:2px; left:2px; width:26px; height:26px;
-      background:var(--toggle-knob); border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,.3); transition:.25s; }
-    .switch input:checked::after { left:22px; }
+    .switch input:checked::after { transform:translateX(30px); background:var(--accent-ink); }
+    .switch input:active { transform:translate(3px,3px); box-shadow:none; }
+    /* redundant text state so "on" is never colour-only */
+    .switch .state {
+      flex:none; font-family:var(--label); font-weight:700; font-size:.62rem; letter-spacing:.08em;
+      color:var(--text); background:var(--chip); border:2px solid var(--border); padding:3px 7px;
+    }
+    .switch input:checked ~ .state { background:var(--green); color:var(--accent-ink); }
+    .switch input:checked ~ .state .s-off { display:none; }
+    .switch input:not(:checked) ~ .state .s-on { display:none; }
+    .switch label {
+      margin:0; flex:1 1 12rem; min-width:0; font-family:"VT323",ui-monospace,monospace;
+      font-size:1.24rem; font-weight:400; text-transform:none; letter-spacing:0; cursor:pointer;
+    }
 
-    .btn { width:100%; padding:14px; border-radius:12px; border:0; font-weight:600; font-size:1.02rem;
-      cursor:pointer; font-family:inherit; margin-top:22px; background:var(--blue); color:var(--btn-fg); }
-    .btn:hover { background:var(--blue-h); }
-    .btn-sec { background:var(--surface); color:var(--blue); border:1px solid var(--border); margin-top:12px; }
-    .btn-sec:hover { background:var(--bg2); }
+    /* ── buttons ── */
+    .btn {
+      display:block; width:100%; margin-top:18px; padding:14px 16px; cursor:pointer;
+      font-family:var(--label); font-weight:700; font-size:.72rem; text-transform:uppercase; letter-spacing:.05em;
+      background:var(--accent); color:var(--accent-ink);
+      border:3px solid var(--border); box-shadow:5px 5px 0 var(--shadow);
+    }
+    .btn:hover { background:var(--accent-h); transform:translate(-1px,-1px); box-shadow:6px 6px 0 var(--shadow); }
+    .btn:active { transform:translate(5px,5px); box-shadow:0 0 0 var(--shadow); }
+    .btn-sec { background:var(--surface); color:var(--text); margin-top:12px; }
+    .btn-sec:hover { background:var(--chip); }
 
-    .status { margin-top:24px; padding:18px; border-radius:14px; background:var(--bg2); }
-    .status .k { color:var(--sub); font-size:.8rem; margin-bottom:6px; }
-    .status .v { font-weight:700; }
-    .muted { color:var(--sub); font-size:.82rem; }
+    /* ── status read-out: small CRT screen, dark in both palettes ── */
+    .status {
+      margin-top:24px; padding:14px 16px; background:var(--screen-bg);
+      border:3px solid var(--border); box-shadow:inset 0 0 0 3px var(--screen-panel);
+    }
+    .status .k {
+      font-family:var(--label); font-size:.6rem; letter-spacing:.1em; text-transform:uppercase;
+      color:var(--screen-cap); margin-bottom:8px;
+    }
+    .status .v { color:var(--screen-fg); font-size:1.3rem; line-height:1.34; }
+    .status .muted { color:var(--screen-cap); font-size:1.12rem; margin-top:6px; }
 
-    .danger-link { background:none; border:0; color:var(--danger); font-size:.9rem; cursor:pointer;
-      font-family:inherit; text-decoration:underline; }
+    /* ── danger zone ── */
+    .danger {
+      margin-top:26px; padding:18px 16px; text-align:center;
+      background:var(--surface); border:3px dashed var(--hot-ink);
+    }
+    .danger .zone {
+      display:block; font-family:var(--label); font-weight:700; font-size:.62rem;
+      letter-spacing:.1em; text-transform:uppercase; color:var(--hot-ink); margin-bottom:6px;
+    }
+    .danger .note { color:var(--sub); font-size:1.14rem; margin-bottom:14px; }
+    .danger-link {
+      display:inline-block; cursor:pointer; padding:10px 16px;
+      font-family:var(--label); font-weight:700; font-size:.66rem; text-transform:uppercase; letter-spacing:.05em;
+      color:var(--hot-ink); background:var(--surface);
+      border:3px solid var(--hot-ink); box-shadow:4px 4px 0 var(--shadow);
+    }
+    .danger-link:hover { background:var(--hot-ink); color:var(--accent-ink); }
+    .danger-link:active { transform:translate(4px,4px); box-shadow:0 0 0 var(--shadow); }
+
+    @media (max-width:480px) {
+      .wrap { padding:26px 14px 48px; }
+      .panel-body { padding:20px 16px 22px; }
+      .panel { box-shadow:5px 5px 0 var(--shadow); }
+    }
+
+    @media (prefers-reduced-motion:reduce) {
+      * { transition:none !important; animation:none !important; }
+      .btn:hover, .btn:active, .theme-toggle:active, nav a:active,
+      .switch input:active, .danger-link:active { transform:none; }
+    }
   </style>
 </head>
 <body>
   <nav>
-    <span class="brand">ViewTitle</span>
+    <span class="brand"><span class="mark" aria-hidden="true">67</span>ViewTitle</span>
     <span class="spacer"></span>
-    <span class="muted">{{ user['email'] }}</span>
+    <span class="who" title="{{ user['email'] }}">{{ user['email'] }}</span>
     {% if is_admin %}<a href="{{ url_for('admin') }}">Admin</a>{% endif %}
     <a href="{{ url_for('logout') }}">Log out</a>
     <button class="theme-toggle" type="button" id="theme-toggle" aria-label="Switch to dark theme">
@@ -156,43 +305,63 @@
   </nav>
 
   <div class="wrap">
-    <h1>Set up your video</h1>
-    <p class="lead">Enter a video ID and flip the switch — the system handles the rest.</p>
+    <header class="page-head">
+      <span class="kicker">Player config</span>
+      <h1>Set up your video</h1>
+      <p class="lead">Enter a video ID and flip the switch &mdash; the system handles the rest.</p>
+    </header>
 
     {% with messages = get_flashed_messages() %}
-      {% for m in messages %}<div class="flash">&#10003; {{ m }}</div>{% endfor %}
+      {% for m in messages %}<div class="flash"><span class="cap" aria-hidden="true">&#10003;</span><span class="msg">{{ m }}</span></div>{% endfor %}
     {% endwith %}
 
-    <div class="card">
-      <form method="post" action="{{ url_for('save') }}">
-        <label>Video ID <span class="hint">— the part after watch?v= in the video URL</span></label>
-        <input type="text" name="video_id" value="{{ user['video_id'] or '' }}" placeholder="dQw4w9WgXcQ" required>
+    <div class="panel">
+      <div class="panel-bar" aria-hidden="true">
+        <span class="dot a"></span><span class="dot b"></span><span class="dot c"></span>
+        <span class="title">settings.cfg</span>
+      </div>
+      <div class="panel-body">
+        <form method="post" action="{{ url_for('save') }}">
+          <div class="field">
+            <label for="video_id">Video ID</label>
+            <p class="hint" id="video_id-hint">The part after <code>watch?v=</code> in the video URL.</p>
+            <input type="text" name="video_id" value="{{ user['video_id'] or '' }}" placeholder="dQw4w9WgXcQ" required
+                   id="video_id" aria-describedby="video_id-hint" autocomplete="off" spellcheck="false">
+          </div>
 
-        <label>Title format <span class="hint">— use {views} where the view count should go</span></label>
-        <input type="text" name="title_template" value="{{ user['title_template'] }}">
+          <div class="field">
+            <label for="title_template">Title format</label>
+            <p class="hint" id="title_template-hint">Use <code>{views}</code> where the view count should go.</p>
+            <input type="text" name="title_template" value="{{ user['title_template'] }}"
+                   id="title_template" aria-describedby="title_template-hint" autocomplete="off" spellcheck="false">
+          </div>
 
-        <div class="switch">
-          <input type="checkbox" name="enabled" id="enabled" {% if user['enabled'] %}checked{% endif %}>
-          <label for="enabled">Update automatically every {{ interval }} minutes</label>
+          <div class="switch">
+            <input type="checkbox" name="enabled" id="enabled" {% if user['enabled'] %}checked{% endif %}>
+            <span class="state" aria-hidden="true"><span class="s-on">On</span><span class="s-off">Off</span></span>
+            <label for="enabled">Update automatically every {{ interval }} minutes</label>
+          </div>
+
+          <button class="btn" type="submit">Save settings</button>
+        </form>
+
+        <form method="post" action="{{ url_for('run_now') }}">
+          <button class="btn btn-sec" type="submit">Update now (test right away)</button>
+        </form>
+
+        <div class="status">
+          <div class="k">Latest status</div>
+          <div class="v">{{ user['last_status'] or 'Not run yet' }}</div>
+          {% if user['updated_at'] %}<div class="muted" style="margin-top:6px">Updated {{ user['updated_at'] }}</div>{% endif %}
         </div>
-
-        <button class="btn" type="submit">Save settings</button>
-      </form>
-
-      <form method="post" action="{{ url_for('run_now') }}">
-        <button class="btn btn-sec" type="submit">Update now (test right away)</button>
-      </form>
-
-      <div class="status">
-        <div class="k">Latest status</div>
-        <div class="v">{{ user['last_status'] or 'Not run yet' }}</div>
-        {% if user['updated_at'] %}<div class="muted" style="margin-top:6px">Updated {{ user['updated_at'] }}</div>{% endif %}
       </div>
     </div>
 
     <form method="post" action="{{ url_for('delete_account') }}"
           onsubmit="return confirm('Delete your account and all data? This action cannot be undone.');"
-          style="text-align:center;margin-top:24px">
+          class="danger">
+      <span class="zone">Danger zone</span>
+      <p class="note">This wipes your settings and revokes the token. It cannot be undone.</p>
       <button type="submit" class="danger-link">
         Delete account and all data
       </button>
