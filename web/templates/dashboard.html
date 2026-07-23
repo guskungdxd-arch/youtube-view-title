@@ -286,7 +286,8 @@
 </head>
 <body>
   <nav>
-    <span class="brand"><span class="mark" aria-hidden="true">67</span>ViewTitle</span>
+    <a class="brand" href="{{ url_for('viewtitle') }}"><span class="mark" aria-hidden="true">67</span>ViewTitle</a>
+    <a href="{{ url_for('home') }}">Build Log</a>
     <span class="spacer"></span>
     <span class="who" title="{{ user['email'] }}">{{ user['email'] }}</span>
     {% if is_admin %}<a href="{{ url_for('admin') }}">Admin</a>{% endif %}

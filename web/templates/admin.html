@@ -234,8 +234,9 @@
 </head>
 <body>
   <nav>
-    <span class="brand"><span class="mark" aria-hidden="true">67</span>ViewTitle</span>
+    <a class="brand" href="{{ url_for('viewtitle') }}"><span class="mark" aria-hidden="true">67</span>ViewTitle</a>
     <span class="tag">Admin</span>
+    <a href="{{ url_for('home') }}">Build Log</a>
     <span class="spacer"></span>
     <a href="{{ url_for('dashboard') }}">My dashboard</a>
     <a href="{{ url_for('logout') }}">Log out</a>
