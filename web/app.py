@@ -55,7 +55,8 @@ PROJECTS = [
         "url": "/channel",
         "status": "Live",
         "tags": ["Flask", "YouTube Data API", "Caching"],
-        "logo": "logo.png",
+        # รูปโปรไฟล์ช่องแปลงเป็น pixel art — สร้างด้วย tools/make_channel_logo.py
+        "logo": "logo-channel.png",
     },
 ]
 
