@@ -312,8 +312,13 @@
       <p class="lead">Enter a video ID and flip the switch &mdash; the system handles the rest.</p>
     </header>
 
-    {% with messages = get_flashed_messages() %}
-      {% for m in messages %}<div class="flash"><span class="cap" aria-hidden="true">&#10003;</span><span class="msg">{{ m }}</span></div>{% endfor %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, m in messages %}
+        <div class="flash {{ 'err' if category == 'err' else '' }}" role="{{ 'alert' if category == 'err' else 'status' }}">
+          <span class="cap" aria-hidden="true">{{ '&#10007;'|safe if category == 'err' else '&#10003;'|safe }}</span>
+          <span class="msg">{{ m }}</span>
+        </div>
+      {% endfor %}
     {% endwith %}
 
     <div class="panel">

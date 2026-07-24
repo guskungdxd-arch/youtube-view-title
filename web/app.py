@@ -115,14 +115,28 @@ def save_creds(sub, creds):
 
 
 # ------------------------------------------------------- ตรรกะอัปเดตชื่อคลิป
+# ข้อความสถานะที่นับเป็น "ล้มเหลว" — เก็บเป็นค่าคงที่เพราะ status_is_error() ต้องเทียบตรง ๆ
+STATUS_NO_VIDEO = "ยังไม่ได้ตั้ง video_id"
+STATUS_NOT_FOUND = "ไม่พบคลิป (เป็นเจ้าของคลิปนี้ไหม?)"
+
+
 def build_title(template, views):
     return (template or DEFAULT_TEMPLATE).format(views=f"{views:,}")
+
+
+def status_is_error(status):
+    """สถานะนี้เป็นความล้มเหลวไหม — ใช้ตัดสินว่า flash ควรเป็นสีแดง
+
+    เทียบกับค่าคงที่ที่ update_one_user คืนจริง ๆ ไม่ใช่เดาจากข้อความ
+    เพื่อไม่ให้หลุดกันเวลาแก้ถ้อยคำ
+    """
+    return status.startswith("error:") or status in (STATUS_NO_VIDEO, STATUS_NOT_FOUND)
 
 
 def update_one_user(row):
     """คืนค่าข้อความสถานะสั้น ๆ"""
     if not row["video_id"]:
-        return "ยังไม่ได้ตั้ง video_id"
+        return STATUS_NO_VIDEO
 
     creds = creds_from_row(row)
     if creds.expired and creds.refresh_token:
@@ -133,7 +147,7 @@ def update_one_user(row):
     resp = youtube.videos().list(part="snippet,statistics", id=row["video_id"]).execute()
     items = resp.get("items", [])
     if not items:
-        return "ไม่พบคลิป (เป็นเจ้าของคลิปนี้ไหม?)"
+        return STATUS_NOT_FOUND
 
     snippet = items[0]["snippet"]
     views = int(items[0]["statistics"].get("viewCount", 0))
@@ -289,7 +303,7 @@ def save():
             "UPDATE users SET video_id=?, title_template=?, enabled=? WHERE sub=?",
             (video_id, template, enabled, user["sub"]),
         )
-    flash("บันทึกแล้ว")
+    flash("บันทึกแล้ว", "ok")
     return redirect(url_for("dashboard"))
 
 
@@ -309,7 +323,7 @@ def run_now():
             "UPDATE users SET last_status=?, updated_at=? WHERE sub=?",
             (status, datetime.now().isoformat(timespec="seconds"), user["sub"]),
         )
-    flash(f"ทดสอบทันที: {status}")
+    flash(f"ทดสอบทันที: {status}", "err" if status_is_error(status) else "ok")
     return redirect(url_for("dashboard"))
 
 
