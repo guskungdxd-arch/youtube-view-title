@@ -213,6 +213,16 @@ def is_admin(user):
     return first is not None and first["sub"] == user["sub"]
 
 
+@app.context_processor
+def inject_base_url():
+    """ให้ทุก template ประกอบ absolute URL ได้ — og:image ต้องเป็น absolute เสมอ
+
+    ไม่ใช้ url_for(_external=True) เพราะแอปอยู่หลัง nginx และไม่ได้ตั้ง ProxyFix
+    มันจึงอาจได้ scheme เป็น http แทน https
+    """
+    return {"base_url": BASE_URL}
+
+
 @app.route("/")
 def home():
     """หน้าแรก = portfolio hub รวมโปรเจกต์"""
