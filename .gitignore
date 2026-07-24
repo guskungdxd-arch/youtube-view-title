@@ -10,6 +10,8 @@ web/.env
 # === ฐานข้อมูล / logs / ไฟล์รัน ===
 data.db
 web/data.db
+quota_state.json
+web/quota_state.json
 *.log
 cron.log
 web/server.log

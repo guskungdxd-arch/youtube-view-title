@@ -345,7 +345,7 @@
           <div class="switch">
             <input type="checkbox" name="enabled" id="enabled" {% if user['enabled'] %}checked{% endif %}>
             <span class="state" aria-hidden="true"><span class="s-on">On</span><span class="s-off">Off</span></span>
-            <label for="enabled">Update automatically every {{ interval }} minutes</label>
+            <label for="enabled">Update automatically{% if interval_shared %} &mdash; about every {{ interval }} minutes right now (shared schedule, it stretches when the daily API quota gets tight){% else %} &mdash; every {{ interval }} minutes{% endif %}</label>
           </div>
 
           <button class="btn" type="submit">Save settings</button>
