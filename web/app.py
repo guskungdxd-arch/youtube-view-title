@@ -6,6 +6,7 @@
 import os
 import json
 import sqlite3
+import time
 from datetime import datetime
 
 from flask import (
@@ -45,6 +46,15 @@ PROJECTS = [
         "url": "/viewtitle",
         "status": "Live",
         "tags": ["Flask", "YouTube Data API", "OAuth 2.0"],
+        "logo": "logo.png",
+    },
+    {
+        "name": "Channel Stats",
+        "tagline": "Subscribers and views, live from the API.",
+        "description": "A scoreboard for my own YouTube channel — subscriber count, total views and video count, pulled straight from the YouTube Data API and cached.",
+        "url": "/channel",
+        "status": "Live",
+        "tags": ["Flask", "YouTube Data API", "Caching"],
         "logo": "logo.png",
     },
 ]
@@ -112,6 +122,70 @@ def save_creds(sub, creds):
         conn.execute(
             "UPDATE users SET credentials=? WHERE sub=?", (creds.to_json(), sub)
         )
+
+
+# ------------------------------------------------- สถิติช่อง (หน้า /channel)
+# หน้านี้เป็นหน้าสาธารณะ ถ้ายิง API ทุก request คนเข้าเยอะจะกิน quota ทันที
+# จึง cache ไว้ CHANNEL_CACHE_TTL วินาที — ที่ค่า default จะยิงมากสุด 48 ครั้ง/วัน (48 หน่วย)
+CHANNEL_CACHE_TTL = int(os.environ.get("CHANNEL_CACHE_TTL", "1800"))
+_channel_cache = {"at": 0.0, "data": None}
+
+
+def _owner_row():
+    """แถวของเจ้าของเว็บ = ผู้ใช้คนแรกที่ล็อกอิน (ตรรกะเดียวกับ is_admin() fallback)"""
+    with db() as conn:
+        return conn.execute("SELECT * FROM users ORDER BY rowid LIMIT 1").fetchone()
+
+
+def fetch_channel_stats():
+    """ดึงสถิติช่องของเจ้าของ ผ่าน token ที่เก็บไว้แล้ว (scope force-ssl ครอบคลุมอยู่)"""
+    row = _owner_row()
+    if row is None or not row["credentials"]:
+        return None
+
+    creds = creds_from_row(row)
+    if creds.expired and creds.refresh_token:
+        creds.refresh(GoogleRequest())
+        save_creds(row["sub"], creds)
+
+    youtube = build("youtube", "v3", credentials=creds)
+    resp = youtube.channels().list(part="snippet,statistics", mine=True).execute()
+    items = resp.get("items", [])
+    if not items:
+        return None
+
+    snip = items[0]["snippet"]
+    st = items[0]["statistics"]
+    thumbs = snip.get("thumbnails", {})
+    thumb = (thumbs.get("medium") or thumbs.get("default") or {}).get("url")
+    return {
+        "title": snip.get("title", ""),
+        "thumb": thumb,
+        # YouTube ซ่อนยอด sub ได้ ถ้าซ่อนจะไม่ส่ง subscriberCount มา
+        "subs_hidden": st.get("hiddenSubscriberCount", False),
+        "subs": int(st.get("subscriberCount", 0)),
+        "views": int(st.get("viewCount", 0)),
+        "videos": int(st.get("videoCount", 0)),
+        "fetched_at": datetime.now().isoformat(timespec="seconds"),
+    }
+
+
+def get_channel_stats():
+    """คืนสถิติจาก cache; ถ้าดึงใหม่ล้มเหลวให้คืนค่าเก่าไว้ ดีกว่าโชว์หน้าพัง"""
+    now = time.monotonic()
+    cached = _channel_cache["data"]
+    if cached is not None and now - _channel_cache["at"] < CHANNEL_CACHE_TTL:
+        return cached
+    try:
+        data = fetch_channel_stats()
+    except Exception as e:  # noqa: BLE001
+        print(f"[channel] ดึงสถิติไม่สำเร็จ: {e}", flush=True)
+        return cached
+    if data is not None:
+        _channel_cache["at"] = now
+        _channel_cache["data"] = data
+        return data
+    return cached
 
 
 # ------------------------------------------------------- ตรรกะอัปเดตชื่อคลิป
@@ -335,6 +409,15 @@ def run_now():
         )
     flash(f"ทดสอบทันที: {status}", "err" if status_is_error(status) else "ok")
     return redirect(url_for("dashboard"))
+
+
+@app.route("/channel")
+def channel():
+    """หน้าสาธารณะ: สถิติช่อง YouTube ของเจ้าของ (มาจาก cache ดู get_channel_stats)"""
+    return render_template(
+        "channel.html", stats=get_channel_stats(), user=current_user(),
+        cache_minutes=CHANNEL_CACHE_TTL // 60,
+    )
 
 
 @app.route("/privacy")
