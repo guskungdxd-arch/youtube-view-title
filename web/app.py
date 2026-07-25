@@ -326,6 +326,22 @@ def _youtube_for_row(row):
 CHANNEL_CACHE_TTL = int(os.environ.get("CHANNEL_CACHE_TTL", "1800"))
 _channel_cache = {"at": 0.0, "data": None}
 
+# เป้ายอด subscriber ที่โชว์บนแถบ progress ในหน้า /channel
+CHANNEL_SUB_GOAL = int(os.environ.get("CHANNEL_SUB_GOAL", "500"))
+# บันไดหมุดหมาย ถ้ายอดจริงแตะเป้าแล้วให้เลื่อนขึ้นขั้นถัดไป แถบจะได้ไม่เต็ม/ล้น
+_GOAL_LADDER = [500, 1000, 2500, 5000, 10000, 25000, 50000, 100000]
+
+
+def channel_sub_goal(subs):
+    """เป้า sub ที่จะโชว์ ถ้ายอดถึงเป้าแล้วเลื่อนขึ้นหมุดถัดไปในบันได"""
+    goal = CHANNEL_SUB_GOAL
+    if not subs:
+        return goal
+    while subs >= goal:
+        nxt = next((m for m in _GOAL_LADDER if m > goal), None)
+        goal = nxt if nxt is not None else goal * 2
+    return goal
+
 
 def _owner_row():
     """แถวของเจ้าของเว็บ = ผู้ใช้คนแรกที่ล็อกอิน (ตรรกะเดียวกับ is_admin() fallback)"""
@@ -817,9 +833,11 @@ def run_now():
 @app.route("/channel")
 def channel():
     """หน้าสาธารณะ: สถิติช่อง YouTube ของเจ้าของ (มาจาก cache ดู get_channel_stats)"""
+    stats = get_channel_stats()
+    sub_goal = channel_sub_goal(stats["subs"]) if stats else CHANNEL_SUB_GOAL
     return render_template(
-        "channel.html", stats=get_channel_stats(), user=current_user(),
-        cache_minutes=CHANNEL_CACHE_TTL // 60,
+        "channel.html", stats=stats, user=current_user(),
+        cache_minutes=CHANNEL_CACHE_TTL // 60, sub_goal=sub_goal,
     )
 
 
