@@ -410,6 +410,7 @@
     .sw.w{width:20px; height:20px; background:var(--hot);}
 
     /* ── the budget meter ── */
+    @property --units{syntax:"<integer>"; inherits:false; initial-value:9000;}
     .meter{
       margin-top:18px; background:var(--surface); border:3px solid var(--border);
       box-shadow:6px 6px 0 var(--shadow); padding:14px 16px;
@@ -417,6 +418,16 @@
     .mhead{display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:11px;}
     .mcap{font-family:var(--label); font-weight:700; font-size:.56rem; letter-spacing:.1em; text-transform:uppercase; color:var(--sub);}
     .mnum{font-family:var(--display); font-size:.66rem; color:var(--text);}
+    /* the readout counts down on the same timeline the bar drains on, so the two can
+       never disagree. registering --units is what makes an integer animatable at all;
+       browsers without @property just show the initial value and the bar still moves. */
+    .mcount::after{content:counter(u);}
+    .mcount{counter-reset:u var(--units); animation:count 16s linear infinite;}
+    @keyframes count{
+      0%{--units:9000} 12%{--units:7920} 24%{--units:6660} 36%{--units:5400}
+      48%{--units:4140} 60%{--units:2880} 72%{--units:1710} 84%{--units:450}
+      96%{--units:450; animation-timing-function:steps(1,end)} 100%{--units:9000}
+    }
     .mtrack{height:22px; background:var(--chip); border:3px solid var(--border); overflow:hidden;}
     .mfill{
       height:100%; width:100%; background:var(--green); border-right:3px solid var(--border);
@@ -481,6 +492,7 @@
       .pipe.heavy .pkt:nth-child(2){top:38%;}
       .pipe.heavy .pkt:nth-child(3){top:70%;}
       .mfill{animation:none; width:46%;}
+      .mcount{animation:none; --units:4140;}   /* the 46% the frozen bar is showing */
       .mlight{animation:none; background:var(--hot);}
     }
   </style>
@@ -798,7 +810,9 @@
         <div class="meter">
           <div class="mhead">
             <span class="mcap">Daily budget</span>
-            <span class="mnum">9,000 units</span>
+            {# read out as a live gauge, so it is aria-hidden — the note below states
+               the 9,000 figure in prose for anyone not looking at the animation. #}
+            <span class="mnum" aria-hidden="true"><span class="mcount"></span> / 9000 units</span>
           </div>
           <div class="mtrack" aria-hidden="true"><div class="mfill"></div></div>
           <p class="mnote">
