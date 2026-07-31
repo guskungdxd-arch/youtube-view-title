@@ -1,0 +1,1013 @@
+{#- one template, four URLs: the chooser (flow is None) and one page per diagram.
+    everything the <head> needs to differ is decided once, here. -#}
+{%- if flow -%}
+  {%- set page_title = flow.name ~ " — How It Works — Build Log" -%}
+  {%- set page_desc = flow.blurb -%}
+  {%- set page_url = base_url ~ url_for('flow_detail', slug=flow.slug) -%}
+{%- else -%}
+  {%- set page_title = "How It Works — Build Log" -%}
+  {%- set page_desc = "Diagrams of the systems behind this site: the OAuth sign-in, the background title-update cycle, and the cache in front of Channel Stats." -%}
+  {%- set page_url = base_url ~ url_for('flow') -%}
+{%- endif -%}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ page_title }}</title>
+  <meta name="description" content="{{ page_desc }}">
+  <script>
+    /* Applied before first paint so a stored theme never flashes the wrong palette. */
+    (function () {
+      try {
+        var t = localStorage.getItem('theme');
+        if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" sizes="any">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+  {# social preview — og:image ต้องเป็น absolute URL จึงประกอบจาก base_url #}
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Build Log">
+  <meta property="og:url" content="{{ page_url }}">
+  <meta property="og:title" content="{{ page_title }}">
+  <meta property="og:description" content="{{ page_desc }}">
+  <meta property="og:image" content="{{ base_url }}{{ url_for('static', filename='og.png') }}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Pixel-art sunset sky with clouds over dark hills">
+  <meta name="twitter:card" content="summary_large_image">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=VT323&display=swap');
+
+    /* ── Light palette: "ARCADE DAY" ── */
+    :root, :root[data-theme="light"]{
+      color-scheme:light;
+      --text:#201c28; --sub:#4a4436;
+      --bg:#ded6bb; --bg2:#cdc4a4; --surface:#f2ecd8; --chip:#e4dcc0;
+      --border:#201c28; --shadow:#201c28;
+      --accent:#2b45c4; --accent-ink:#f4efdc; --link:#2b45c4; --hot:#d61f4e;
+      --green:#1c7a34;
+      --nav-bg:#e8e1c8; --dither:rgba(32,28,40,.09);
+      --display:"Press Start 2P",monospace; --label:"Silkscreen",monospace;
+      --icon-sun:block; --icon-moon:none;
+    }
+    /* ── Dark palette: "NIGHT CRT" ── */
+    @media (prefers-color-scheme:dark){
+      :root:not([data-theme="light"]){
+        color-scheme:dark;
+        --text:#8ef2b0; --sub:#57bd82;
+        --bg:#070d09; --bg2:#0b130e; --surface:#0f1a14; --chip:#12241a;
+        --border:#2f6b47; --shadow:#1b4d30;
+        --accent:#ffd24a; --accent-ink:#08130c; --link:#ffd24a; --hot:#ff5c72;
+        --green:#4ce07a;
+        --nav-bg:#0a120c; --dither:rgba(120,240,160,.06);
+        --display:"Press Start 2P",monospace; --label:"Silkscreen",monospace;
+        --icon-sun:none; --icon-moon:block;
+      }
+    }
+    :root[data-theme="dark"]{
+      color-scheme:dark;
+      --text:#8ef2b0; --sub:#57bd82;
+      --bg:#070d09; --bg2:#0b130e; --surface:#0f1a14; --chip:#12241a;
+      --border:#2f6b47; --shadow:#1b4d30;
+      --accent:#ffd24a; --accent-ink:#08130c; --link:#ffd24a; --hot:#ff5c72;
+      --green:#4ce07a;
+      --nav-bg:#0a120c; --dither:rgba(120,240,160,.06);
+      --display:"Press Start 2P",monospace; --label:"Silkscreen",monospace;
+      --icon-sun:none; --icon-moon:block;
+    }
+
+    *{box-sizing:border-box; margin:0; padding:0;}
+    html{-webkit-text-size-adjust:100%;}
+    @media (prefers-reduced-motion:no-preference){ html{scroll-behavior:smooth;} }
+    body{
+      font-family:"VT323",ui-monospace,"Courier New",monospace;
+      font-size:1.28rem; line-height:1.42; color:var(--text); background:var(--bg);
+      background-image:
+        linear-gradient(45deg,var(--dither) 25%,transparent 25% 75%,var(--dither) 75%),
+        linear-gradient(45deg,var(--dither) 25%,transparent 25% 75%,var(--dither) 75%);
+      background-size:6px 6px; background-position:0 0,3px 3px;
+      overflow-wrap:anywhere; overflow-x:hidden;
+    }
+    img{max-width:100%; image-rendering:pixelated;}
+    a{text-decoration:none;}
+    :focus-visible{outline:3px solid var(--accent); outline-offset:2px;}
+    ::selection{background:var(--accent); color:var(--accent-ink);}
+
+    /* ── nav ── */
+    nav{
+      position:sticky; top:0; z-index:50; min-height:54px; display:flex; align-items:center;
+      justify-content:center; gap:18px; flex-wrap:wrap; padding:8px 16px;
+      background:var(--nav-bg); border-bottom:3px solid var(--border);
+      font-family:var(--label); font-size:.62rem; letter-spacing:.03em; text-transform:uppercase;
+    }
+    nav .brand{display:inline-flex; align-items:center; gap:10px; color:var(--text); font-weight:700;}
+    nav .mark{
+      width:26px; height:26px; flex:none; display:grid; place-items:center;
+      background:var(--accent); color:var(--accent-ink); border:2px solid var(--border);
+      box-shadow:2px 2px 0 var(--shadow); font-size:.6rem; line-height:1;
+    }
+    nav a{color:var(--text); position:relative; padding:3px 1px;}
+    nav a:not(.brand):hover{color:var(--link);}
+    nav a:not(.brand):hover::after{
+      content:""; position:absolute; left:0; right:0; bottom:-3px; height:2px; background:var(--link);
+    }
+    nav a:active{transform:translateY(1px);}
+
+    /* ── theme toggle ── */
+    .theme-toggle{
+      display:inline-grid; place-items:center; width:34px; height:30px; flex:none; padding:0;
+      background:var(--surface); color:var(--text); border:2px solid var(--border);
+      box-shadow:2px 2px 0 var(--shadow); cursor:pointer; font:inherit; -webkit-tap-highlight-color:transparent;
+    }
+    .theme-toggle:hover{color:var(--link);}
+    .theme-toggle:active{transform:translate(2px,2px); box-shadow:none;}
+    .theme-toggle svg{display:block;}
+    .theme-toggle .sun{display:var(--icon-sun);}
+    .theme-toggle .moon{display:var(--icon-moon);}
+    ::view-transition-old(root),::view-transition-new(root){animation-duration:.2s; animation-timing-function:steps(4,end);}
+
+    /* ── page head ── */
+    .wrap{max-width:860px; margin:0 auto; padding:40px 20px 80px;}
+    .page-head{text-align:center; margin-bottom:26px;}
+    .kicker{
+      display:inline-block; font-family:var(--label); font-size:.62rem; font-weight:700;
+      letter-spacing:.12em; text-transform:uppercase; color:var(--accent-ink);
+      background:var(--accent); border:2px solid var(--border); box-shadow:3px 3px 0 var(--shadow);
+      padding:6px 10px; margin-bottom:20px;
+    }
+    h1{
+      font-family:var(--display); font-size:clamp(.98rem,4.6vw,1.7rem); line-height:1.5;
+      text-transform:uppercase; color:var(--text);
+    }
+    .lead{color:var(--sub); margin:16px auto 0; max-width:48ch; font-size:1.3rem; line-height:1.32;}
+
+    /* ── chooser cards (echo of the project cards on the home page) ── */
+    /* 238px min track: three cards still fit across the 860px .wrap, so the set
+       reads as one row on a desktop instead of two-plus-an-orphan. */
+    .picks{
+      list-style:none; display:grid; gap:22px; margin:36px auto 0;
+      grid-template-columns:repeat(auto-fit,minmax(min(238px,100%),1fr));
+    }
+    .pick{
+      position:relative; display:flex; flex-direction:column; height:100%; background:var(--surface);
+      padding:24px 22px; color:var(--text); border:3px solid var(--border); box-shadow:6px 6px 0 var(--shadow);
+    }
+    .pick:hover{transform:translate(-2px,-2px); box-shadow:9px 9px 0 var(--shadow);}
+    .pick:active{transform:translate(4px,4px); box-shadow:2px 2px 0 var(--shadow);}
+    .pick .idx{
+      font-family:var(--label); font-size:.6rem; font-weight:700; color:var(--accent);
+      letter-spacing:.08em; text-transform:uppercase;
+    }
+    .pick .top{display:flex; align-items:center; gap:14px; margin:14px 0 12px;}
+    .pick .proj{
+      font-family:var(--label); font-size:.56rem; font-weight:700; letter-spacing:.1em;
+      text-transform:uppercase; color:var(--sub);
+    }
+    .pick h2{
+      font-family:var(--label); font-weight:700; font-size:.9rem; line-height:1.25;
+      text-transform:uppercase; letter-spacing:.01em; color:var(--text); margin-bottom:10px;
+    }
+    .pick .blurb{color:var(--sub); font-size:1.14rem; line-height:1.28;}
+    .pick .spacer{flex:1 1 auto;}
+    .pick .cardcap{
+      margin-top:18px; padding-top:14px; border-top:2px solid var(--border);
+      font-family:var(--label); font-weight:700; font-size:.56rem; line-height:1.7;
+      letter-spacing:.07em; text-transform:uppercase; color:var(--text);
+    }
+    .pick .go{
+      margin-top:16px; color:var(--link); font-family:var(--label); font-weight:700; font-size:.62rem;
+      text-transform:uppercase; letter-spacing:.05em; display:inline-flex; align-items:center; gap:7px;
+    }
+    .pick .go .arw{transition:transform .12s steps(3,end);}
+    .pick:hover .go .arw{transform:translateX(4px);}
+
+    /* a still frame of that diagram: two boxes and three pixels on a pipe.
+       static on purpose — three looping animations on one screen is noise. */
+    .motif{display:grid; justify-items:center; gap:3px; flex:none;}
+    .motif i{display:block; border:2px solid var(--border); background:var(--chip);}
+    .motif .cap{width:40px; height:9px;}
+    .motif .dot{width:9px; height:9px; background:var(--mo,var(--green));}
+    .pick.viewtitle-auth{--mo:var(--accent);}
+    .pick.viewtitle-update{--mo:var(--hot);}
+    .pick.channel-cache{--mo:var(--green);}
+
+    /* nothing to choose from — the chooser is data-driven, so this can happen */
+    .none{
+      max-width:520px; margin:36px auto 0; text-align:center; color:var(--sub);
+      background:var(--surface); border:3px solid var(--border); box-shadow:6px 6px 0 var(--shadow);
+      padding:34px 26px;
+    }
+    .none h2{
+      font-family:var(--label); font-weight:700; font-size:.82rem; letter-spacing:.04em;
+      text-transform:uppercase; color:var(--text); margin-bottom:10px;
+    }
+
+    /* ── back / prev-next ── */
+    .back{
+      display:inline-flex; align-items:center; gap:8px; margin-bottom:26px;
+      font-family:var(--label); font-weight:700; font-size:.58rem; letter-spacing:.06em;
+      text-transform:uppercase; color:var(--text);
+      background:var(--surface); border:2px solid var(--border); box-shadow:3px 3px 0 var(--shadow);
+      padding:8px 10px;
+    }
+    .back:hover{background:var(--accent); color:var(--accent-ink);}
+    .back:active{transform:translate(3px,3px); box-shadow:none;}
+    .pager{
+      list-style:none; display:flex; flex-wrap:wrap; gap:12px; justify-content:space-between;
+      margin-top:40px; padding-top:24px; border-top:3px solid var(--border);
+    }
+    .pager li{min-width:0; max-width:100%;}
+    .pager li.rest{margin-left:auto;}
+    .pager a{
+      display:block; max-width:100%; background:var(--surface); color:var(--text);
+      border:3px solid var(--border); box-shadow:4px 4px 0 var(--shadow); padding:11px 13px;
+    }
+    .pager a:hover{color:var(--link);}
+    .pager a:active{transform:translate(4px,4px); box-shadow:none;}
+    .pager .dir{
+      display:block; font-family:var(--label); font-weight:700; font-size:.52rem;
+      letter-spacing:.1em; text-transform:uppercase; color:var(--sub); margin-bottom:6px;
+    }
+    .pager .ttl{
+      display:block; font-family:var(--label); font-weight:700; font-size:.68rem;
+      letter-spacing:.02em; text-transform:uppercase; line-height:1.35;
+    }
+    .pager li.next{text-align:right;}
+
+    /* ── one flow section ── */
+    .flow{margin-top:0;}
+    .flow-head{max-width:56ch; margin:0 auto 26px;}
+    .flow-head .no{
+      display:inline-block; font-family:var(--label); font-weight:700; font-size:.56rem;
+      letter-spacing:.14em; text-transform:uppercase; color:var(--sub); margin-bottom:10px;
+    }
+    /* on a detail page this heading IS the page title, so it is the h1 */
+    .flow-head h1{
+      font-size:clamp(.88rem,3.9vw,1.3rem); line-height:1.5; margin-bottom:12px;
+    }
+    .flow-head p{color:var(--sub); font-size:1.18rem; line-height:1.34;}
+    .flow-head p + p{margin-top:8px;}
+
+    /* the diagram column stays narrow and vertical even on a wide screen */
+    .diagram{max-width:560px; margin:0 auto;}
+
+    /* ── boxes ── */
+    .node{
+      background:var(--surface); border:3px solid var(--border); box-shadow:6px 6px 0 var(--shadow);
+      padding:14px 16px;
+    }
+    .node-head{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px;}
+    h3{
+      font-family:var(--label); font-weight:700; font-size:.72rem; letter-spacing:.04em;
+      text-transform:uppercase; color:var(--text); line-height:1.4;
+    }
+    .node p{font-size:1.08rem; line-height:1.3; color:var(--sub);}
+    .node p + p{margin-top:8px;}
+    code{
+      font-family:"VT323",monospace; font-size:1em; color:var(--text);
+      background:var(--chip); border:2px solid var(--border); padding:0 5px;
+    }
+    .plate{
+      display:block; text-align:center; margin-top:10px;
+      font-family:var(--label); font-weight:700; font-size:.56rem; letter-spacing:.14em;
+      text-transform:uppercase; color:var(--sub);
+    }
+    .cost{
+      flex:none; font-family:var(--label); font-weight:700; font-size:.54rem; letter-spacing:.06em;
+      text-transform:uppercase; color:var(--accent-ink); background:var(--green);
+      border:2px solid var(--border); box-shadow:2px 2px 0 var(--shadow); padding:5px 7px;
+    }
+    .cost.big{background:var(--hot);}
+    .cost.free{background:var(--chip); color:var(--text);}
+
+    /* ── browser window box ── */
+    .win{background:var(--surface); border:3px solid var(--border); box-shadow:6px 6px 0 var(--shadow);}
+    .win .bar{
+      display:flex; align-items:center; gap:9px; padding:7px 9px;
+      background:var(--chip); border-bottom:3px solid var(--border);
+    }
+    .win .btns{display:flex; gap:4px; flex:none;}
+    .win .btns i{display:block; width:8px; height:8px; background:var(--border);}
+    .win .url{
+      min-width:0; font-family:var(--label); font-size:.5rem; letter-spacing:.04em; color:var(--sub);
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .win .body{padding:14px 16px;}
+    .win .body p{font-size:1.08rem; line-height:1.3; color:var(--sub); margin-top:8px;}
+    .fake-btn{
+      display:inline-block; font-family:var(--label); font-weight:700; font-size:.58rem;
+      letter-spacing:.05em; text-transform:uppercase; color:var(--accent-ink); background:var(--accent);
+      border:2px solid var(--border); box-shadow:3px 3px 0 var(--shadow); padding:8px 10px;
+    }
+
+    /* ── the pipe between two boxes ────────────────────────────────────────
+       3-column grid so the pipe is always dead-centre under the boxes and the
+       annotations live in the 1fr columns beside it — they wrap instead of
+       pushing the page wide, so a 320px screen still never scrolls sideways. */
+    .rail{display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:10px; margin:0;}
+    /* every child is pinned to row 1 — without this the explicit grid-column on a
+       later child makes auto-placement drop it onto a new row, under the pipe. */
+    .rail > *{grid-row:1;}
+    .spine{grid-column:2; display:grid; justify-items:center;}
+    .pipe{
+      position:relative; width:var(--pw,26px); height:var(--ph,84px);
+      background:var(--chip); border-left:3px solid var(--border); border-right:3px solid var(--border);
+      overflow:hidden;
+    }
+    .arrow{
+      width:0; height:0; border-left:9px solid transparent; border-right:9px solid transparent;
+      border-top:11px solid var(--border);
+    }
+    .tag{
+      font-family:var(--label); font-size:.52rem; line-height:1.65; letter-spacing:.05em;
+      text-transform:uppercase; color:var(--sub);
+    }
+    .tag.r{grid-column:3; justify-self:start; text-align:left;}
+    .tag.l{grid-column:1; justify-self:end; text-align:right;}
+    .tag b{color:var(--text); font-weight:700;}
+
+    /* travelling packets: still stepped, never a free glide — but the step is small
+       enough (~4px a jump) to read as flow rather than as a stutter. */
+    .pkt{
+      position:absolute; left:50%; margin-left:calc(var(--s,10px) / -2);
+      top:calc((var(--s,10px) + 3px) * -1);
+      width:var(--s,10px); height:var(--s,10px);
+      background:var(--green); border:2px solid var(--border);
+      animation:drop 1.8s steps(24,end) infinite;
+    }
+    /* the delays are one full cycle divided by however many packets that pipe has,
+       so the stream is evenly spaced (and already full at load — hence negative). */
+    .pipe.n6 .pkt:nth-child(2){animation-delay:-.3s;}
+    .pipe.n6 .pkt:nth-child(3){animation-delay:-.6s;}
+    .pipe.n6 .pkt:nth-child(4){animation-delay:-.9s;}
+    .pipe.n6 .pkt:nth-child(5){animation-delay:-1.2s;}
+    .pipe.n6 .pkt:nth-child(6){animation-delay:-1.5s;}
+    .pipe.n4 .pkt:nth-child(2){animation-delay:-.45s;}
+    .pipe.n4 .pkt:nth-child(3){animation-delay:-.9s;}
+    .pipe.n4 .pkt:nth-child(4){animation-delay:-1.35s;}
+    .pipe.n3 .pkt:nth-child(2){animation-delay:-.6s;}
+    .pipe.n3 .pkt:nth-child(3){animation-delay:-1.2s;}
+    @keyframes drop{
+      from{transform:translateY(0);}
+      to{transform:translateY(calc(var(--ph,84px) + var(--s,10px) + 6px));}
+    }
+    /* the expensive lane: fat blocks, slow, one at a time */
+    .pipe.heavy{--pw:46px;}
+    .pipe.heavy .pkt{
+      --s:28px; background:var(--hot); display:grid; place-items:center;
+      font-family:var(--label); font-weight:700; font-size:.46rem; color:var(--accent-ink);
+      /* fewer, larger steps than the read stream on purpose: the write is meant to
+         look heavy. smoother than it was, still visibly the slower lane. */
+      animation-duration:3.6s; animation-timing-function:steps(14,end);
+    }
+    .pipe.heavy.n3 .pkt:nth-child(2){animation-delay:-1.2s;}
+    .pipe.heavy.n3 .pkt:nth-child(3){animation-delay:-2.4s;}
+    .pipe.heavy.n2 .pkt:nth-child(2){animation-delay:-1.8s;}
+    .pipe.auth .pkt{background:var(--accent);}
+    .pipe.miss .pkt{background:var(--hot);}
+
+    /* ── exits out of a decision box ── */
+    .exits{display:grid; gap:8px; margin-top:12px;}
+    .exit{
+      display:flex; gap:9px; align-items:flex-start;
+      background:var(--chip); border:2px solid var(--border); padding:8px 9px;
+    }
+    .exit .k{
+      flex:none; font-family:var(--label); font-weight:700; font-size:.52rem; letter-spacing:.06em;
+      text-transform:uppercase; color:var(--accent-ink); background:var(--green);
+      border:2px solid var(--border); padding:4px 6px;
+    }
+    .exit.no .k{background:var(--hot);}
+    .exit .d{font-size:1.04rem; line-height:1.26; color:var(--text); min-width:0;}
+
+    /* ── the two scheduler lanes ── */
+    .lanes{display:grid; gap:10px; margin-top:12px;}
+    @media (min-width:560px){ .lanes{grid-template-columns:1fr 1fr;} }
+    .lane{background:var(--chip); border:2px solid var(--border); padding:10px 11px;}
+    .lane .n{
+      display:block; font-family:var(--label); font-weight:700; font-size:.56rem;
+      letter-spacing:.07em; text-transform:uppercase; color:var(--text);
+    }
+    .lane .v{
+      display:block; font-family:var(--display); font-size:.66rem; line-height:1.5;
+      color:var(--text); margin:9px 0 7px;
+    }
+    .lane p{font-size:1.02rem; line-height:1.26; color:var(--sub);}
+    .lane.owner{border-color:var(--border); box-shadow:inset 0 0 0 2px var(--accent);}
+
+    /* ── legend ── */
+    .legend{
+      list-style:none; display:flex; flex-wrap:wrap; gap:8px 18px; justify-content:center;
+      margin-bottom:16px; font-family:var(--label); font-size:.52rem; letter-spacing:.05em;
+      text-transform:uppercase; color:var(--sub);
+    }
+    .legend li{display:flex; align-items:center; gap:7px;}
+    .sw{width:12px; height:12px; flex:none; border:2px solid var(--border); background:var(--green);}
+    .sw.w{width:20px; height:20px; background:var(--hot);}
+
+    /* ── the budget meter ── */
+    .meter{
+      margin-top:18px; background:var(--surface); border:3px solid var(--border);
+      box-shadow:6px 6px 0 var(--shadow); padding:14px 16px;
+    }
+    .mhead{display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:11px;}
+    .mcap{font-family:var(--label); font-weight:700; font-size:.56rem; letter-spacing:.1em; text-transform:uppercase; color:var(--sub);}
+    .mnum{font-family:var(--display); font-size:.66rem; color:var(--text);}
+    .mtrack{height:22px; background:var(--chip); border:3px solid var(--border); overflow:hidden;}
+    .mfill{
+      height:100%; width:100%; background:var(--green); border-right:3px solid var(--border);
+      background-image:repeating-linear-gradient(90deg,rgba(0,0,0,.16) 0 4px,transparent 4px 8px);
+      /* linear, not steps: the bar already reads as cells through its 4px gradient,
+         so the width can fall continuously without losing the pixel look. */
+      animation:drain 16s linear infinite;
+    }
+    @keyframes drain{
+      0%{width:100%} 12%{width:88%} 24%{width:74%} 36%{width:60%} 48%{width:46%}
+      60%{width:32%} 72%{width:19%} 84%{width:5%}
+      /* the reset at midnight Pacific is instant, so this last hop stays a hard snap
+         instead of sweeping back up like the budget refills gradually. */
+      96%{width:5%; animation-timing-function:steps(1,end)} 100%{width:100%}
+    }
+    .mnote{font-size:1.06rem; line-height:1.3; color:var(--sub); margin-top:11px;}
+    .mstop{
+      display:flex; align-items:flex-start; gap:9px; margin-top:11px;
+      background:var(--chip); border:2px dashed var(--hot); padding:9px 10px;
+      font-size:1.04rem; line-height:1.26; color:var(--text);
+    }
+    .mlight{
+      width:13px; height:13px; flex:none; margin-top:3px; background:var(--chip);
+      border:2px solid var(--border); animation:lamp 16s steps(1,end) infinite;
+    }
+    @keyframes lamp{0%,83%{background:var(--chip)} 84%,100%{background:var(--hot)}}
+
+    /* ── all-caps caption under each diagram ── */
+    .caption{
+      margin:22px auto 0; max-width:46ch; text-align:center;
+      font-family:var(--label); font-weight:700; font-size:.62rem; line-height:1.8;
+      letter-spacing:.09em; text-transform:uppercase; color:var(--text);
+      border-top:3px solid var(--border); padding-top:16px;
+    }
+    .caption span{color:var(--sub); display:block; font-weight:400; font-size:.54rem; margin-top:8px;}
+
+    footer{
+      border-top:3px solid var(--border); margin-top:44px; padding:22px 20px 30px;
+      text-align:center; font-family:var(--label); font-size:.58rem; letter-spacing:.06em;
+      text-transform:uppercase; color:var(--sub);
+    }
+    footer a{color:var(--link);}
+    footer a:hover{color:var(--hot); text-decoration:underline;}
+    footer .row{display:flex; gap:16px; justify-content:center; flex-wrap:wrap;}
+
+    /* ── reduced motion: freeze everything, keep every label readable ──
+       The packets park spread along their pipes so each diagram still reads
+       as a static poster; the meter parks mid-drain and the out-of-budget
+       lamp is lit, because that annotation must not depend on the animation. */
+    @media (prefers-reduced-motion:reduce){
+      nav a,.theme-toggle,footer a,.pick .go .arw{transition:none;}
+      .theme-toggle:active,nav a:active,.back:active,.pager a:active{transform:none;}
+      .pick:hover,.pick:active,.pick:hover .go .arw{transform:none;}
+      .pipe .pkt{animation:none; transform:none;}
+      .pipe .pkt:nth-child(1){top:4%;}
+      .pipe .pkt:nth-child(2){top:20%;}
+      .pipe .pkt:nth-child(3){top:36%;}
+      .pipe .pkt:nth-child(4){top:52%;}
+      .pipe .pkt:nth-child(5){top:68%;}
+      .pipe .pkt:nth-child(6){top:84%;}
+      .pipe.heavy .pkt:nth-child(1){top:6%;}
+      .pipe.heavy .pkt:nth-child(2){top:38%;}
+      .pipe.heavy .pkt:nth-child(3){top:70%;}
+      .mfill{animation:none; width:46%;}
+      .mlight{animation:none; background:var(--hot);}
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a class="brand" href="{{ url_for('home') }}"><span class="mark" aria-hidden="true">&#9654;</span>Build Log</a>
+    <a href="{{ url_for('viewtitle') }}">ViewTitle</a>
+    {% if user %}<a href="{{ url_for('dashboard') }}">Dashboard</a>
+    {% else %}<a href="{{ url_for('login') }}">Sign in</a>{% endif %}
+    <button class="theme-toggle" type="button" id="theme-toggle" aria-label="Switch to dark theme">
+      <svg class="sun" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4.2"/>
+        <path d="M12 2.4v2.2M12 19.4v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.4 12h2.2M19.4 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/>
+      </svg>
+      <svg class="moon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M20.5 13.4A8.4 8.4 0 1 1 10.6 3.5a6.6 6.6 0 0 0 9.9 9.9z"/>
+      </svg>
+    </button>
+  </nav>
+
+  <main class="wrap">
+  {% if not flow %}
+    {# ─────────────────────────── the chooser ─────────────────────────── #}
+    <header class="page-head">
+      <span class="kicker">Under the hood</span>
+      <h1>How It Works</h1>
+      <p class="lead">
+        Diagrams of the systems actually running on this site &mdash; what happens when you sign
+        in, what the background job does while you are not looking, and how a public page serves
+        everyone without paying for it twice. Pick one.
+      </p>
+    </header>
+
+    {% if flows %}
+      <ul class="picks">
+        {% for f in flows %}
+          <li>
+            {# the motif borrows the packet colour from its own diagram; the slug is the
+               hook, and any future slug just falls back to the default green. #}
+            <a class="pick {{ f.slug }}" href="{{ url_for('flow_detail', slug=f.slug) }}">
+              <span class="idx">D{{ '%02d'|format(loop.index) }} / {{ '%02d'|format(flows|length) }}</span>
+              <div class="top">
+                <span class="motif" aria-hidden="true">
+                  <i class="cap"></i><i class="dot"></i><i class="dot"></i><i class="dot"></i><i class="cap"></i>
+                </span>
+                <span class="proj">{{ f.project }}</span>
+              </div>
+              <h2>{{ f.name }}</h2>
+              <p class="blurb">{{ f.blurb }}</p>
+              <span class="spacer"></span>
+              <p class="cardcap">{{ f.caption }}</p>
+              <span class="go">See the diagram <span class="arw" aria-hidden="true">&#9654;</span></span>
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="none">
+        <h2>No diagrams yet</h2>
+        <p>Nothing has been drawn up here so far &mdash; check back after the next build.</p>
+      </div>
+    {% endif %}
+  {% else %}
+    {# ──────────────────── one diagram, one page ──────────────────── #}
+    <a class="back" href="{{ url_for('flow') }}"><span aria-hidden="true">&#9664;</span> All diagrams</a>
+
+    {% if flow.slug == 'viewtitle-auth' %}
+    <!-- ══════════════════════════════ FLOW 1 ══════════════════════════════ -->
+    <section class="flow" id="viewtitle-auth">
+      <div class="flow-head">
+        <span class="no">Flow 01 &mdash; ViewTitle</span>
+        <h1>Signing in</h1>
+        <p>
+          ViewTitle never sees your Google password. You approve it on Google's own screen, and
+          the app keeps only the token that comes back.
+        </p>
+        <p>
+          The sign-in uses OAuth 2.0 with PKCE, which means the request that starts the login and
+          the request that finishes it have to prove they are the same request.
+        </p>
+      </div>
+
+      <div class="diagram">
+        <div class="win">
+          <div class="bar">
+            <span class="btns" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="url">azuretestproject.com/viewtitle</span>
+          </div>
+          <div class="body">
+            <span class="fake-btn" aria-hidden="true">Sign in with Google</span>
+            <p>You click the button. Nothing has been asked of Google yet.</p>
+          </div>
+        </div>
+
+        <div class="rail">
+          <div class="spine">
+            <div class="pipe auth n4" aria-hidden="true"><span class="pkt"></span><span class="pkt"></span><span class="pkt"></span><span class="pkt"></span></div>
+            <span class="arrow" aria-hidden="true"></span>
+          </div>
+          <p class="tag r">GET <b>/login</b></p>
+        </div>
+
+        <div class="node">
+          <div class="node-head"><h3><code>/login</code> &mdash; Flask</h3></div>
+          <p>
+            Builds the OAuth flow, generates a fresh PKCE <code>code_verifier</code>, and stashes
+            it in the Flask session next to the <code>state</code> value before redirecting.
+          </p>
+        </div>
+
+        <div class="rail">
+          <div class="spine">
+            <div class="pipe auth n4" aria-hidden="true"><span class="pkt"></span><span class="pkt"></span><span class="pkt"></span><span class="pkt"></span></div>
+            <span class="arrow" aria-hidden="true"></span>
+          </div>
+          <p class="tag l">Session holds<br><b>code_verifier</b></p>
+          <p class="tag r">Redirect to<br>Google</p>
+        </div>
+
+        <div class="node">
+          <div class="node-head"><h3>Google consent screen</h3></div>
+          <p>
+            Google's page, not ours. You pick an account and approve the
+            <code>youtube.force-ssl</code> scope, then Google sends the browser back with a
+            one-time authorization code.
+          </p>
+        </div>
+
+        <div class="rail">
+          <div class="spine">
+            <div class="pipe auth n4" aria-hidden="true"><span class="pkt"></span><span class="pkt"></span><span class="pkt"></span><span class="pkt"></span></div>
+            <span class="arrow" aria-hidden="true"></span>
+          </div>
+          <p class="tag r">One-time<br><b>code</b></p>
+        </div>
+
+        <div class="node">
+          <div class="node-head"><h3><code>/oauth2callback</code></h3></div>
+          <p>
+            Rebuilds the flow with the <em>same</em> <code>code_verifier</code> pulled back out of
+            the session, then trades the code for an access token and a refresh token.
+          </p>
+          <div class="exits">
+            <div class="exit">
+              <span class="k">Same verifier</span>
+              <span class="d">Token exchange succeeds.</span>
+            </div>
+            <div class="exit no">
+              <span class="k">Missing</span>
+              <span class="d">Rebuild the flow without it and Google answers
+                <code>invalid_grant: Missing code verifier</code>.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="rail">
+          <div class="spine">
+            <div class="pipe auth n3" aria-hidden="true"><span class="pkt"></span><span class="pkt"></span><span class="pkt"></span></div>
+            <span class="arrow" aria-hidden="true"></span>
+          </div>
+          <p class="tag r">Store the<br>credentials</p>
+        </div>
+
+        <div class="node">
+          <div class="node-head"><h3>SQLite &mdash; <code>users</code></h3></div>
+          <p>
+            <code>Credentials.to_json()</code> is written to the <code>users.credentials</code>
+            column, keyed by the Google <code>sub</code>. That row is the only thing the
+            background job needs later &mdash; no password, ever.
+          </p>
+        </div>
+        <span class="plate">Server</span>
+      </div>
+
+      <p class="caption">
+        Same verifier, or no token
+        <span>The session is the only thing tying the two halves of the login together.</span>
+      </p>
+    </section>
+    {% elif flow.slug == 'viewtitle-update' %}
+    <!-- ══════════════════════════════ FLOW 2 ══════════════════════════════ -->
+    <section class="flow" id="viewtitle-update">
+      <div class="flow-head">
+        <span class="no">Flow 02 &mdash; ViewTitle</span>
+        <h1>The Update Cycle</h1>
+        <p>
+          APScheduler runs inside the Flask process. Every cycle reads the live view counts,
+          compares them with the titles that are already on the videos, and writes only what
+          actually changed.
+        </p>
+        <p>
+          The whole design is shaped by one fact: a read costs 1 quota unit and can carry fifty
+          videos, while a write costs 50 units and can carry exactly one.
+        </p>
+      </div>
+
+      <div class="diagram">
+        <ul class="legend">
+          <li><span class="sw" aria-hidden="true"></span> Read &mdash; 1 unit</li>
+          <li><span class="sw w" aria-hidden="true"></span> Write &mdash; 50 units</li>
+        </ul>
+
+        <div class="node">
+          <div class="node-head"><h3>APScheduler &mdash; in the Flask process</h3></div>
+          <p>
+            One process, one scheduler. Gunicorn runs a single worker on purpose: a second worker
+            would start a second scheduler and double every API call.
+          </p>
+          <div class="lanes">
+            <div class="lane owner">
+              <span class="n">Owner lane</span>
+              <span class="v">Every 10 min</span>
+              <p>Fixed interval, and it ignores the shared budget completely &mdash; it keeps
+                running even after the shared lane has stopped for the day.</p>
+            </div>
+            <div class="lane">
+              <span class="n">Shared lane</span>
+              <span class="v">30 min &ndash; 6 h</span>
+              <p>Recomputed after every run from the units still left and the minutes left until
+                the quota resets, then clamped into that range.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="rail">
+          <div class="spine">
+            <div class="pipe n6" style="--ph:96px" aria-hidden="true"><span class="pkt"></span><span class="pkt"></span><span class="pkt"></span><span class="pkt"></span><span class="pkt"></span><span class="pkt"></span></div>
+            <span class="arrow" aria-hidden="true"></span>
+          </div>
+          <p class="tag l">Both lanes run<br>the same steps</p>
+          <p class="tag r">Up to <b>50 ids</b><br>in one call</p>
+        </div>
+
+        <div class="node">
+          <div class="node-head">
+            <h3><code>videos.list</code> &mdash; read</h3>
+            <span class="cost">1 unit</span>
+          </div>
+          <p>
+            Every video id in the batch goes into a single request for
+            <code>snippet,statistics</code>. Fifty ids or one id, the call costs the same 1 unit,
+            so reading is close to free.
+          </p>
+        </div>
+
+        <div class="rail">
+          <div class="spine">
+            <div class="pipe n4" style="--ph:70px" aria-hidden="true"><span class="pkt"></span><span class="pkt"></span><span class="pkt"></span><span class="pkt"></span></div>
+            <span class="arrow" aria-hidden="true"></span>
+          </div>
+          <p class="tag r">View counts<br>come back</p>
+        </div>
+
+        <div class="node">
+          <div class="node-head"><h3>Compare</h3></div>
+          <p>
+            The new title is built from the live view count and held against the title already on
+            the video.
+          </p>
+          <div class="exits">
+            <div class="exit">
+              <span class="k">Identical</span>
+              <span class="d">Stop here. Nothing is sent, nothing is spent.</span>
+            </div>
+            <div class="exit no">
+              <span class="k">Different</span>
+              <span class="d">Go on to the write &mdash; and pay for it.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="rail">
+          <div class="spine">
+            <div class="pipe heavy n3" style="--ph:150px" aria-hidden="true"><span class="pkt">50</span><span class="pkt">50</span><span class="pkt">50</span></div>
+            <span class="arrow" aria-hidden="true"></span>
+          </div>
+          <p class="tag l">No batching<br>on this side</p>
+          <p class="tag r">One request<br><b>per video</b></p>
+        </div>
+
+        <div class="node">
+          <div class="node-head">
+            <h3><code>videos.update</code> &mdash; write</h3>
+            <span class="cost big">50 units each</span>
+          </div>
+          <p>
+            <code>part=snippet</code> replaces the <em>whole</em> snippet, so the request re-sends
+            the <code>description</code>, <code>tags</code> and <code>categoryId</code> exactly as
+            they were read back (<code>categoryId</code> is required and falls back to
+            <code>"22"</code>).
+          </p>
+          <p>
+            Send only the title and YouTube silently wipes the description, the tags and the
+            category. That is the bug this shape of the code exists to prevent.
+          </p>
+        </div>
+
+        <div class="rail">
+          <div class="spine">
+            <div class="pipe heavy n2" style="--ph:86px" aria-hidden="true"><span class="pkt">50</span><span class="pkt">50</span></div>
+            <span class="arrow" aria-hidden="true"></span>
+          </div>
+          <p class="tag r">New title<br>goes live</p>
+        </div>
+
+        <div class="node">
+          <div class="node-head"><h3>YouTube Data API v3</h3></div>
+          <p>The title on the video now matches the number of views it has.</p>
+        </div>
+        <span class="plate">YouTube</span>
+
+        <div class="meter">
+          <div class="mhead">
+            <span class="mcap">Daily budget</span>
+            <span class="mnum">9,000 units</span>
+          </div>
+          <div class="mtrack" aria-hidden="true"><div class="mfill"></div></div>
+          <p class="mnote">
+            The API allows 10,000 units a day; the app budgets 9,000 and keeps the rest as
+            headroom. Spending is counted at the call sites themselves &mdash; never estimated
+            &mdash; and persisted under the current Pacific date, because that is when YouTube
+            resets the quota.
+          </p>
+          <p class="mstop">
+            <span class="mlight" aria-hidden="true"></span>
+            <span>When the budget runs out the shared lane stops until midnight Pacific. The owner
+              lane does not check it, which is exactly why it is a separate lane.</span>
+          </p>
+        </div>
+      </div>
+
+      <p class="caption">
+        Reads are cheap &mdash; writes cost 50
+        <span>Fifty videos read for one unit; one video written for fifty.</span>
+      </p>
+    </section>
+    {% elif flow.slug == 'channel-cache' %}
+    <!-- ══════════════════════════════ FLOW 3 ══════════════════════════════ -->
+    <section class="flow" id="channel-cache">
+      <div class="flow-head">
+        <span class="no">Flow 03 &mdash; Channel Stats</span>
+        <h1>The Cache</h1>
+        <p>
+          Channel Stats is a public page: anyone can open it, reload it, or link it somewhere
+          busy. If every visit called the API, one quiet afternoon could burn the whole day's
+          quota.
+        </p>
+        <p>
+          So the numbers are read once and kept in memory for thirty minutes. Almost every visit
+          is served without leaving the server at all.
+        </p>
+      </div>
+
+      <div class="diagram">
+        <div class="win">
+          <div class="bar">
+            <span class="btns" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="url">azuretestproject.com/channel</span>
+          </div>
+          <div class="body">
+            <p>A visitor opens the page. No sign-in, no account &mdash; anyone at all.</p>
+          </div>
+        </div>
+
+        <div class="rail">
+          <div class="spine">
+            <div class="pipe n4" style="--ph:76px" aria-hidden="true"><span class="pkt"></span><span class="pkt"></span><span class="pkt"></span><span class="pkt"></span></div>
+            <span class="arrow" aria-hidden="true"></span>
+          </div>
+          <p class="tag r">GET <b>/channel</b></p>
+        </div>
+
+        <div class="node">
+          <div class="node-head"><h3>In-memory cache check</h3></div>
+          <p>
+            One dictionary in the running process, holding the last answer and the moment it was
+            fetched.
+          </p>
+          <div class="exits">
+            <div class="exit">
+              <span class="k">Hit &middot; 0 units</span>
+              <span class="d">Younger than 30 minutes &rarr; return it straight to the visitor.
+                The request never leaves the server.</span>
+            </div>
+            <div class="exit no">
+              <span class="k">Miss</span>
+              <span class="d">Empty or older than 30 minutes &rarr; go and ask YouTube, once.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="rail">
+          <div class="spine">
+            <div class="pipe miss n1" style="--ph:88px" aria-hidden="true"><span class="pkt"></span></div>
+            <span class="arrow" aria-hidden="true"></span>
+          </div>
+          <p class="tag l">Only on<br>a miss</p>
+          <p class="tag r">At most<br><b>once / 30 min</b></p>
+        </div>
+
+        <div class="node">
+          <div class="node-head">
+            <h3><code>channels.list(mine=True)</code></h3>
+            <span class="cost">1 unit</span>
+          </div>
+          <p>
+            Read with the owner's stored credentials &mdash; the same token the update cycle uses,
+            counted against the same daily budget. Subscribers, total views and video count come
+            back in one response.
+          </p>
+        </div>
+
+        <div class="rail">
+          <div class="spine">
+            <div class="pipe n3" style="--ph:76px" aria-hidden="true"><span class="pkt"></span><span class="pkt"></span><span class="pkt"></span></div>
+            <span class="arrow" aria-hidden="true"></span>
+          </div>
+          <p class="tag r">Store for<br><b>30 minutes</b></p>
+        </div>
+
+        <div class="node">
+          <div class="node-head">
+            <h3>Cached &mdash; <code>CHANNEL_CACHE_TTL</code></h3>
+            <span class="cost free">~48 units / day</span>
+          </div>
+          <p>
+            Thirty minutes of TTL means at most 48 reads in a day &mdash; whether the page gets
+            ten visitors or ten thousand. The cost of this page does not grow with its traffic.
+          </p>
+          <div class="exits">
+            <div class="exit">
+              <span class="k">Refresh failed</span>
+              <span class="d">The stale cached numbers are served anyway. A slightly old
+                scoreboard beats a broken page.</span>
+            </div>
+            <div class="exit no">
+              <span class="k">Nothing cached</span>
+              <span class="d">Only then does the page show
+                <strong>&ldquo;Scoreboard offline&rdquo;</strong>.</span>
+            </div>
+          </div>
+        </div>
+        <span class="plate">Server</span>
+      </div>
+
+      <p class="caption">
+        One read serves every visitor
+        <span>Traffic goes up; the quota bill stays flat.</span>
+      </p>
+    </section>
+    {% endif %}
+
+    {# prev/next come from `flows` itself, so a fourth diagram needs no edit here.
+       matched on slug rather than object identity, and it simply finds nothing
+       if this flow is somehow not in the list. #}
+    {% set ns = namespace(prev=None, next=None) %}
+    {% for f in flows %}
+      {% if f.slug == flow.slug %}
+        {% if not loop.first %}{% set ns.prev = flows[loop.index0 - 1] %}{% endif %}
+        {% if not loop.last %}{% set ns.next = flows[loop.index0 + 1] %}{% endif %}
+      {% endif %}
+    {% endfor %}
+    {% set prev = ns.prev %}{% set next = ns.next %}
+    {% if prev or next %}
+      <ul class="pager">
+        {% if prev %}
+          <li>
+            <a href="{{ url_for('flow_detail', slug=prev.slug) }}">
+              <span class="dir"><span aria-hidden="true">&#9664;</span> Previous</span>
+              <span class="ttl">{{ prev.name }}</span>
+            </a>
+          </li>
+        {% endif %}
+        {% if next %}
+          <li class="next{% if not prev %} rest{% endif %}">
+            <a href="{{ url_for('flow_detail', slug=next.slug) }}">
+              <span class="dir">Next <span aria-hidden="true">&#9654;</span></span>
+              <span class="ttl">{{ next.name }}</span>
+            </a>
+          </li>
+        {% endif %}
+      </ul>
+    {% endif %}
+  {% endif %}
+  </main>
+
+  <footer>
+    <div class="row">
+      <a href="{{ url_for('home') }}">Build Log</a>
+      <a href="{{ url_for('privacy') }}">Privacy</a>
+      <a href="{{ url_for('terms') }}">Terms</a>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      var root = document.documentElement;
+      var btn = document.getElementById('theme-toggle');
+      var mq = window.matchMedia('(prefers-color-scheme: dark)');
+
+      function resolved() {
+        var t = root.getAttribute('data-theme');
+        return (t === 'dark' || t === 'light') ? t : (mq.matches ? 'dark' : 'light');
+      }
+      function sync() {
+        var dark = resolved() === 'dark';
+        btn.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+        btn.title = dark ? 'Switch to light theme' : 'Switch to dark theme';
+      }
+      btn.addEventListener('click', function () {
+        var next = resolved() === 'dark' ? 'light' : 'dark';
+        try { localStorage.setItem('theme', next); } catch (e) {}
+        var apply = function () { root.setAttribute('data-theme', next); sync(); };
+        if (document.startViewTransition &&
+            !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          document.startViewTransition(apply);
+        } else {
+          apply();
+        }
+      });
+      if (mq.addEventListener) mq.addEventListener('change', sync);
+      else if (mq.addListener) mq.addListener(sync);
+      sync();
+    })();
+  </script>
+</body>
+</html>

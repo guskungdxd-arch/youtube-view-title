@@ -91,7 +91,48 @@ PROJECTS = [
         # ไอคอนคนแบบ pixel — สร้างด้วย tools/make_avatar_logo.py
         "logo": "logo-channel.png",
     },
+    {
+        "name": "Flow",
+        "tagline": "How the other two actually work.",
+        "description": "Animated diagrams of the systems on this site — the OAuth handshake, the update loop and what it costs in API quota, and the cache that keeps a public page free.",
+        "url": "/flow",
+        "status": "Live",
+        "tags": ["CSS animation", "Systems design", "No JS"],
+        # ไอคอนท่อส่งข้อมูลแบบ pixel — สร้างด้วย tools/make_flow_logo.py
+        "logo": "logo-flow.png",
+    },
 ]
+
+# ไดอะแกรมบนหน้า /flow — เมนูอยู่ที่ /flow, ตัวไดอะแกรมอยู่ที่ /flow/<slug>
+# เพิ่มไดอะแกรมใหม่ = append dict ที่นี่ + เพิ่มบล็อกในเทมเพลตที่ตรงกับ slug
+FLOWS = [
+    {
+        "slug": "viewtitle-auth",
+        "project": "ViewTitle",
+        "name": "Signing in",
+        "blurb": "OAuth 2.0 with PKCE — why the request that starts the login and the "
+                 "request that finishes it have to prove they are the same request.",
+        "caption": "Same verifier, or no token",
+    },
+    {
+        "slug": "viewtitle-update",
+        "project": "ViewTitle",
+        "name": "The update cycle",
+        "blurb": "What the background job does every cycle, and why the whole design is "
+                 "shaped by a read costing 1 quota unit and a write costing 50.",
+        "caption": "Reads are cheap — writes cost 50",
+    },
+    {
+        "slug": "channel-cache",
+        "project": "Channel Stats",
+        "name": "The cache",
+        "blurb": "How a public page serves every visitor from one API call, so the quota "
+                 "bill stays flat no matter how much traffic it gets.",
+        "caption": "One read serves every visitor",
+    },
+]
+
+FLOWS_BY_SLUG = {f["slug"]: f for f in FLOWS}
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET", "dev-secret-change-me")
@@ -725,6 +766,25 @@ def home():
 def viewtitle():
     """หน้า landing เดิมของ ViewTitle (Google review อ่านหน้านี้)"""
     return render_template("viewtitle.html", user=current_user())
+
+
+@app.route("/flow")
+def flow():
+    """เมนูเลือกไดอะแกรม — หน้า static ล้วน ไม่ยิง API"""
+    return render_template(
+        "flow.html", flows=FLOWS, flow=None, user=current_user()
+    )
+
+
+@app.route("/flow/<slug>")
+def flow_detail(slug):
+    """ไดอะแกรมเดียวเต็มหน้า — เทมเพลตเดียวกับเมนู เลือกบล็อกด้วย flow.slug"""
+    item = FLOWS_BY_SLUG.get(slug)
+    if item is None:
+        abort(404)
+    return render_template(
+        "flow.html", flows=FLOWS, flow=item, user=current_user()
+    )
 
 
 @app.route("/login")
