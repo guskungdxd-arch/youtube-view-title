@@ -422,7 +422,13 @@
        never disagree. registering --units is what makes an integer animatable at all;
        browsers without @property just show the initial value and the bar still moves. */
     .mcount::after{content:counter(u);}
-    .mcount{counter-reset:u var(--units); animation:count 16s linear infinite;}
+    /* steps(), not linear: a timing function applies between each pair of keyframes,
+       so this is 6 ticks per 1.92s segment — about three a second. Interpolating every
+       frame made the last digits change 60 times a second, which reads as flicker
+       rather than as a number. Fewer ticks read calmer but let the readout sit further
+       from the bar between them; six keeps that gap under three points. The bar stays
+       linear — only the readout ticks. */
+    .mcount{counter-reset:u var(--units); animation:count 16s steps(6,end) infinite;}
     @keyframes count{
       0%{--units:9000} 12%{--units:7920} 24%{--units:6660} 36%{--units:5400}
       48%{--units:4140} 60%{--units:2880} 72%{--units:1710} 84%{--units:450}
