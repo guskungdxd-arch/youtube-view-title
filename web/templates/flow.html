@@ -40,7 +40,7 @@
   <meta property="og:image:alt" content="Pixel-art sunset sky with clouds over dark hills">
   <meta name="twitter:card" content="summary_large_image">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=VT323&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=VT323&family=Chakra+Petch:wght@400;700&display=swap');
 
     /* ── Light palette: "ARCADE DAY" ── */
     :root, :root[data-theme="light"]{
@@ -51,7 +51,7 @@
       --accent:#2b45c4; --accent-ink:#f4efdc; --link:#2b45c4; --hot:#d61f4e;
       --green:#1c7a34;
       --nav-bg:#e8e1c8; --dither:rgba(32,28,40,.09);
-      --display:"Press Start 2P",monospace; --label:"Silkscreen",monospace;
+      --display:"Press Start 2P","Chakra Petch",monospace; --label:"Silkscreen","Chakra Petch",monospace;
       --icon-sun:block; --icon-moon:none;
     }
     /* ── Dark palette: "NIGHT CRT" ── */
@@ -64,7 +64,7 @@
         --accent:#ffd24a; --accent-ink:#08130c; --link:#ffd24a; --hot:#ff5c72;
         --green:#4ce07a;
         --nav-bg:#0a120c; --dither:rgba(120,240,160,.06);
-        --display:"Press Start 2P",monospace; --label:"Silkscreen",monospace;
+        --display:"Press Start 2P","Chakra Petch",monospace; --label:"Silkscreen","Chakra Petch",monospace;
         --icon-sun:none; --icon-moon:block;
       }
     }
@@ -76,7 +76,7 @@
       --accent:#ffd24a; --accent-ink:#08130c; --link:#ffd24a; --hot:#ff5c72;
       --green:#4ce07a;
       --nav-bg:#0a120c; --dither:rgba(120,240,160,.06);
-      --display:"Press Start 2P",monospace; --label:"Silkscreen",monospace;
+      --display:"Press Start 2P","Chakra Petch",monospace; --label:"Silkscreen","Chakra Petch",monospace;
       --icon-sun:none; --icon-moon:block;
     }
 
@@ -84,7 +84,7 @@
     html{-webkit-text-size-adjust:100%;}
     @media (prefers-reduced-motion:no-preference){ html{scroll-behavior:smooth;} }
     body{
-      font-family:"VT323",ui-monospace,"Courier New",monospace;
+      font-family:"VT323","Chakra Petch",ui-monospace,"Courier New",monospace;
       font-size:1.28rem; line-height:1.42; color:var(--text); background:var(--bg);
       background-image:
         linear-gradient(45deg,var(--dither) 25%,transparent 25% 75%,var(--dither) 75%),
@@ -268,7 +268,7 @@
     .node p{font-size:1.08rem; line-height:1.3; color:var(--sub);}
     .node p + p{margin-top:8px;}
     code{
-      font-family:"VT323",monospace; font-size:1em; color:var(--text);
+      font-family:"VT323","Chakra Petch",monospace; font-size:1em; color:var(--text);
       background:var(--chip); border:2px solid var(--border); padding:0 5px;
     }
     .plate{

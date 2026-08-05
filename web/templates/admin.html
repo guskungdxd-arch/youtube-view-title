@@ -17,7 +17,7 @@
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
   <title>Admin — ViewTitle</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=VT323&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=VT323&family=Chakra+Petch:wght@400;700&display=swap');
 
     /* ── Light palette: "ARCADE DAY" — aged cabinet plastic, ink, cobalt + red ── */
     :root, :root[data-theme="light"] {
@@ -30,7 +30,7 @@
       --green:#1c7a34;
       --nav-bg:#e8e1c8; --rule:#b5ac8d;
       --dither:rgba(32,28,40,.09);
-      --display:"Press Start 2P",monospace; --label:"Silkscreen",monospace;
+      --display:"Press Start 2P","Chakra Petch",monospace; --label:"Silkscreen","Chakra Petch",monospace;
       --icon-sun:block; --icon-moon:none;
     }
     /* ── Dark palette: "NIGHT CRT" — green phosphor on black, amber interactive ── */
@@ -45,7 +45,7 @@
         --green:#4ce07a;
         --nav-bg:#0a120c; --rule:#22503a;
         --dither:rgba(120,240,160,.06);
-        --display:"Press Start 2P",monospace; --label:"Silkscreen",monospace;
+        --display:"Press Start 2P","Chakra Petch",monospace; --label:"Silkscreen","Chakra Petch",monospace;
         --icon-sun:none; --icon-moon:block;
       }
     }
@@ -59,14 +59,14 @@
       --green:#4ce07a;
       --nav-bg:#0a120c; --rule:#22503a;
       --dither:rgba(120,240,160,.06);
-      --display:"Press Start 2P",monospace; --label:"Silkscreen",monospace;
+      --display:"Press Start 2P","Chakra Petch",monospace; --label:"Silkscreen","Chakra Petch",monospace;
       --icon-sun:none; --icon-moon:block;
     }
 
     * { box-sizing:border-box; margin:0; padding:0; }
     html { -webkit-text-size-adjust:100%; }
     body {
-      font-family:"VT323",ui-monospace,"Courier New",monospace;
+      font-family:"VT323","Chakra Petch",ui-monospace,"Courier New",monospace;
       font-size:1.28rem; line-height:1.42;
       color:var(--text); background:var(--bg);
       background-image:
@@ -195,7 +195,7 @@
       font-family:var(--label); font-weight:700; font-size:.72rem; line-height:1;
     }
     code {
-      font-family:"VT323",ui-monospace,monospace; font-size:1em; color:var(--text);
+      font-family:"VT323","Chakra Petch",ui-monospace,monospace; font-size:1em; color:var(--text);
       background:var(--chip); border:2px solid var(--border); padding:0 6px; white-space:nowrap;
     }
     /* on/off pills: filled block + word, never colour alone */

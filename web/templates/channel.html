@@ -29,7 +29,7 @@
   <meta property="og:image:alt" content="Pixel-art sunset sky with clouds over dark hills">
   <meta name="twitter:card" content="summary_large_image">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=VT323&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=VT323&family=Chakra+Petch:wght@400;700&display=swap');
 
     /* ── Light palette: "ARCADE DAY" ── */
     :root, :root[data-theme="light"]{
@@ -43,7 +43,7 @@
       --cl-coral:#d97757; --cl-shade:#b85c40; --cl-cream:#f4ece0; --cl-sparkle:#ffd24a;
       --cl-outline:#2a1a12; --cl-ink:#2a1a12;   /* dark brown; both read on the light tan bg */
       --nav-bg:#e8e1c8; --dither:rgba(32,28,40,.09);
-      --display:"Press Start 2P",monospace; --label:"Silkscreen",monospace;
+      --display:"Press Start 2P","Chakra Petch",monospace; --label:"Silkscreen","Chakra Petch",monospace;
       /* the score board is a little CRT monitor — dark in BOTH themes */
       --screen-bg:#0b0f0a; --screen-panel:#141a12; --screen-fg:#ffc233; --screen-cap:#d8b869;
       --screen-line:rgba(0,0,0,.55);
@@ -62,7 +62,7 @@
         --cl-outline:#c98a63;              /* light tan: a dark outline vanishes on #070d09 */
         --cl-ink:#2a1a12;                  /* stays dark: eyes/mouth sit on the cream face */
         --nav-bg:#0a120c; --dither:rgba(120,240,160,.06);
-        --display:"Press Start 2P",monospace; --label:"Silkscreen",monospace;
+        --display:"Press Start 2P","Chakra Petch",monospace; --label:"Silkscreen","Chakra Petch",monospace;
         --screen-bg:#0b0f0a; --screen-panel:#141a12; --screen-fg:#ffc233; --screen-cap:#d8b869;
         --screen-line:rgba(0,0,0,.55);
         --icon-sun:none; --icon-moon:block;
@@ -79,7 +79,7 @@
       --cl-outline:#c98a63;                /* light tan: a dark outline vanishes on #070d09 */
       --cl-ink:#2a1a12;                    /* stays dark: eyes/mouth sit on the cream face */
       --nav-bg:#0a120c; --dither:rgba(120,240,160,.06);
-      --display:"Press Start 2P",monospace; --label:"Silkscreen",monospace;
+      --display:"Press Start 2P","Chakra Petch",monospace; --label:"Silkscreen","Chakra Petch",monospace;
       --screen-bg:#0b0f0a; --screen-panel:#141a12; --screen-fg:#ffc233; --screen-cap:#d8b869;
       --screen-line:rgba(0,0,0,.55);
       --icon-sun:none; --icon-moon:block;
@@ -88,7 +88,7 @@
     *{box-sizing:border-box; margin:0; padding:0;}
     html{-webkit-text-size-adjust:100%;}
     body{
-      font-family:"VT323",ui-monospace,"Courier New",monospace;
+      font-family:"VT323","Chakra Petch",ui-monospace,"Courier New",monospace;
       font-size:1.28rem; line-height:1.42; color:var(--text); background:var(--bg);
       background-image:
         linear-gradient(45deg,var(--dither) 25%,transparent 25% 75%,var(--dither) 75%),
@@ -192,7 +192,7 @@
       font-size:1.08rem; color:var(--sub); margin-top:18px; text-align:center;
     }
     .foot-note code{
-      font-family:"VT323",monospace; background:var(--chip); border:2px solid var(--border);
+      font-family:"VT323","Chakra Petch",monospace; background:var(--chip); border:2px solid var(--border);
       padding:0 6px; font-size:1em;
     }
 
@@ -373,7 +373,7 @@
       padding:calc(var(--p)*1.4) calc(var(--p)*2);
       background:var(--surface); color:var(--text);
       border:3px solid var(--border); box-shadow:4px 4px 0 var(--shadow);
-      font-family:"VT323",monospace; font-size:1.05rem; line-height:1.05; text-align:center;
+      font-family:"VT323","Chakra Petch",monospace; font-size:1.05rem; line-height:1.05; text-align:center;
       opacity:0; transform:translateY(4px) scale(.7);
       animation:say 9s ease-in-out infinite;
     }
