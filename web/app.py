@@ -14,7 +14,8 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from flask import (
-    Flask, redirect, url_for, session, request, render_template, flash, abort
+    Flask, redirect, url_for, session, request, render_template, flash, abort,
+    jsonify,
 )
 import google_auth_oauthlib.flow
 from google.oauth2.credentials import Credentials
@@ -838,19 +839,62 @@ def dashboard():
     )
 
 
+# คอลัมน์ที่หน้า admin ใช้ — เขียนชื่อออกมาตรง ๆ ไม่ใช่ SELECT * เพราะก้อนนี้ถูกส่ง
+# ออกไปเป็น JSON ให้เบราว์เซอร์ด้วย `credentials` (OAuth token ของทุกคน) ต้องไม่หลุดไป
+_ADMIN_COLUMNS = (
+    "sub", "email", "video_id", "title_template", "enabled", "last_status", "updated_at",
+)
+
+
+def admin_snapshot(me=None):
+    """ทุกอย่างที่หน้า admin แสดง — อ่าน SQLite กับไฟล์โควตาเท่านั้น ไม่ยิง YouTube API"""
+    with db() as conn:
+        rows = [
+            dict(r)
+            for r in conn.execute(
+                f"SELECT {', '.join(_ADMIN_COLUMNS)} FROM users ORDER BY rowid DESC"
+            )
+        ]
+    for row in rows:
+        # เทียบ sub แล้วทิ้ง ไม่ส่ง id ของ Google ออกไปกับ JSON ทั้งที่หน้าเว็บไม่ได้ใช้
+        row["is_me"] = me is not None and row.pop("sub") == me["sub"]
+    return {
+        "rows": rows,
+        "stats": {
+            "total": len(rows),
+            "active": sum(1 for r in rows if r["enabled"]),
+            "configured": sum(1 for r in rows if r["video_id"]),
+        },
+        "quota": {
+            "used": quota_used(),
+            "budget": QUOTA_BUDGET,
+            "owner_interval": OWNER_INTERVAL_MINUTES,
+            "shared_interval": shared_interval_minutes(),
+        },
+        "now": datetime.now().strftime("%H:%M:%S"),
+    }
+
+
 @app.route("/admin")
 def admin():
     user = current_user()
     if not is_admin(user):
         abort(403)
-    with db() as conn:
-        rows = conn.execute("SELECT * FROM users ORDER BY rowid DESC").fetchall()
-    stats = {
-        "total": len(rows),
-        "active": sum(1 for r in rows if r["enabled"]),
-        "configured": sum(1 for r in rows if r["video_id"]),
-    }
-    return render_template("admin.html", rows=rows, stats=stats, me=user)
+    return render_template("admin.html", me=user, **admin_snapshot(user))
+
+
+@app.route("/admin/data")
+def admin_data():
+    """หน้า admin ดึงซ้ำทุกไม่กี่วินาที
+
+    เป็น polling ไม่ใช่ SSE/WebSocket โดยตั้งใจ — gunicorn รัน `--workers 1`
+    (ไม่งั้น scheduler จะซ้อนกัน) connection ที่ค้างไว้จะยึด worker ตัวเดียวที่มี
+    แล้วทั้งเว็บหยุดตอบ
+    """
+    user = current_user()
+    if not is_admin(user):
+        abort(403)
+    return jsonify(admin_snapshot(user))
 
 
 @app.route("/save", methods=["POST"])
