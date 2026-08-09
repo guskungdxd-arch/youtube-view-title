@@ -58,6 +58,19 @@ VIDEOS_LIST_MAX_IDS = 50
 
 # เจ้าของเว็บได้เลนเร็วคงที่ ส่วนคนอื่นใช้ interval ที่ปรับตามโควตาที่เหลือ
 OWNER_INTERVAL_MINUTES = int(os.environ.get("OWNER_INTERVAL_MINUTES", "10"))
+
+# ── โหมดเร่งช่วงเปิดตัวคลิป ───────────────────────────────────────────────
+# งบเป็นรายวันแต่ไม่ต้องใช้เท่ากันทุกชั่วโมง ชั่วโมงแรกหลังคลิปขึ้นคือตอนที่มีคนดู
+# จริงและยอดขยับเร็วที่สุด จึงยอมทุ่มงบไปตรงนั้นแล้วผ่อนลงทีหลัง
+# ตั้งเวลาด้วย env (เวลาไทย): BURST_FROM=2026-08-09T17:00 BURST_UNTIL=2026-08-09T20:00
+BURST_FROM = os.environ.get("BURST_FROM", "").strip()
+BURST_UNTIL = os.environ.get("BURST_UNTIL", "").strip()
+BURST_TZ = os.environ.get("BURST_TZ", "Asia/Bangkok")
+# อ่านถี่ได้เพราะอ่าน = 1 หน่วย แต่เขียน = 50 จึงคุมระยะห่างการเขียนแยกต่างหาก
+BURST_READ_SECONDS = int(os.environ.get("BURST_READ_SECONDS", "30"))
+BURST_MIN_WRITE_SECONDS = int(os.environ.get("BURST_MIN_WRITE_SECONDS", "120"))
+# กันโหมดเร่งดูดงบจนหมดเกลี้ยง — ต่ำกว่านี้แล้วถอยกลับไปจังหวะปกติ
+BURST_RESERVE_UNITS = int(os.environ.get("BURST_RESERVE_UNITS", "600"))
 MIN_INTERVAL_MINUTES = int(
     os.environ.get("MIN_INTERVAL_MINUTES", str(UPDATE_INTERVAL_MINUTES))
 )
@@ -458,6 +471,33 @@ def status_is_error(status):
     return status.startswith("error:") or status in (STATUS_NO_VIDEO, STATUS_NOT_FOUND)
 
 
+# เวลาที่เขียนชื่อสำเร็จครั้งล่าสุดของแต่ละคน — เก็บในหน่วยความจำพอ ถ้า restart แล้วหาย
+# ผลเสียคือเขียนเกินมาหนึ่งครั้ง (50 หน่วย) ไม่คุ้มกับการเพิ่มคอลัมน์ในฐานข้อมูล
+_last_write = {}
+_last_write_lock = threading.RLock()
+
+
+def write_cooldown_left(sub, now=None):
+    """เหลืออีกกี่วินาทีถึงจะเขียนชื่อคนนี้ได้อีกครั้ง (0 = เขียนได้เลย)
+
+    บังคับเฉพาะตอนโหมดเร่ง — นอกโหมดนี้เลนเจ้าของวิ่งทุก 10 นาทีอยู่แล้ว
+    ระยะห่างจึงมาจากตัว scheduler เอง ไม่ต้องมีตัวคุมซ้อน
+    """
+    if not burst_active(now) or BURST_MIN_WRITE_SECONDS <= 0:
+        return 0
+    with _last_write_lock:
+        last = _last_write.get(sub)
+    if last is None:
+        return 0
+    gap = (now or datetime.now()).timestamp() - last
+    return max(0, math.ceil(BURST_MIN_WRITE_SECONDS - gap))
+
+
+def _mark_written(sub, now=None):
+    with _last_write_lock:
+        _last_write[sub] = (now or datetime.now()).timestamp()
+
+
 def _apply_item(row, item, youtube):
     """ตัดสินใจจาก item ที่อ่านมาแล้วว่าต้องเปลี่ยนชื่อไหม แล้วคืนข้อความสถานะ
 
@@ -472,6 +512,12 @@ def _apply_item(row, item, youtube):
     if snippet.get("title") == new_title:
         return f"วิว {views:,} — ชื่อไม่เปลี่ยน"
 
+    # ตอนเร่ง เราอ่านทุก 30 วิ (1 หน่วย) แต่ไม่ได้แปลว่าจะเขียนได้ทุก 30 วิ (50 หน่วย)
+    # ถ้ายอดขยับถี่กว่าระยะนี้ก็ปล่อยให้มันสะสมแล้วเขียนทีเดียว — ชื่อยังเป็นเลขล่าสุด
+    wait = write_cooldown_left(row["sub"])
+    if wait:
+        return f"วิว {views:,} — รออีก {wait} วิ ค่อยเขียน"
+
     body = {
         "id": row["video_id"],
         "snippet": {
@@ -482,6 +528,7 @@ def _apply_item(row, item, youtube):
         },
     }
     yt_videos_update(youtube, body)
+    _mark_written(row["sub"])
     return f"✅ อัปเดตเป็น {views:,} วิว"
 
 
@@ -621,9 +668,13 @@ def run_owner():
     """
     owner_rows, _ = _split_lanes()
     spent = _process_rows(owner_rows)
+    # ตรวจหลังรัน ไม่ใช่ก่อน — หน้าต่างเวลาอาจเพิ่งเปิด/ปิด หรืองบเพิ่งตกใต้ reserve
+    # จากรอบนี้เอง จังหวะถัดไปต้องสะท้อนสถานะล่าสุดเสมอ
+    seconds = _reschedule_owner(owner_interval_seconds())
     print(
         f"[{datetime.now():%H:%M:%S}] run_owner: {len(owner_rows)} คน "
-        f"ใช้ {spent} หน่วย (ใช้ไปวันนี้ {quota_used()}/{QUOTA_BUDGET})",
+        f"ใช้ {spent} หน่วย (ใช้ไปวันนี้ {quota_used()}/{QUOTA_BUDGET}) "
+        f"รอบถัดไปอีก {seconds} วิ{' [เร่ง]' if burst_active() else ''}",
         flush=True,
     )
     return spent
@@ -669,6 +720,53 @@ def run_all():
     return run_owner() + run_shared()
 
 
+# ------------------------------------------------------ โหมดเร่งช่วงเปิดตัว
+def _burst_bound(value):
+    """แปลงค่า env เป็น datetime มี tz; ค่าว่างหรือพังคือ 'ไม่ตั้ง' ไม่ใช่ error
+
+    ถ้าเขียนวันที่ผิดแล้วแอปตายตอน import คือทำเว็บล่มเพราะพิมพ์ผิด ไม่คุ้ม
+    """
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        print(f"[burst] อ่านเวลา {value!r} ไม่ออก — ถือว่าไม่ได้ตั้งโหมดเร่ง", flush=True)
+        return None
+    if parsed.tzinfo is None:
+        try:
+            parsed = parsed.replace(tzinfo=ZoneInfo(BURST_TZ))
+        except Exception:  # noqa: BLE001
+            print(f"[burst] ไม่รู้จักโซนเวลา {BURST_TZ!r} — ใช้เวลาเครื่อง", flush=True)
+            parsed = parsed.astimezone()
+    return parsed
+
+
+def burst_window():
+    return _burst_bound(BURST_FROM), _burst_bound(BURST_UNTIL)
+
+
+def burst_active(now=None):
+    """อยู่ในหน้าต่างเวลาที่ตั้งไว้ **และ** งบยังเหลือมากกว่า reserve
+
+    เงื่อนไขงบสำคัญพอ ๆ กับเงื่อนไขเวลา: เลนเจ้าของไม่เช็คงบโดยตั้งใจ ถ้าปล่อยให้
+    อ่านทุก 30 วิ + เขียนทุก 2 นาทีจนงบหมดเกลี้ยง เลนรวมของคนอื่นจะไม่เหลืออะไรเลย
+    """
+    start, end = burst_window()
+    if start is None or end is None:
+        return False
+    now = now or datetime.now(ZoneInfo(BURST_TZ) if BURST_TZ else None).astimezone()
+    if now.tzinfo is None:
+        now = now.astimezone()
+    if not (start <= now < end):
+        return False
+    return quota_remaining() > BURST_RESERVE_UNITS
+
+
+def owner_interval_seconds(now=None):
+    return BURST_READ_SECONDS if burst_active(now) else OWNER_INTERVAL_MINUTES * 60
+
+
 # ------------------------------------------------------- คุม scheduler / จังหวะ
 # APScheduler ตั้ง interval ครั้งเดียวตอน add_job — ถ้าอยากให้เปลี่ยนจริงต้อง
 # reschedule() ทุกรอบ ไม่ใช่แค่เปลี่ยนค่าตัวแปร
@@ -680,6 +778,18 @@ shared_job = None
 def _wait_for_reset_minutes(now=None):
     """ตอนข้ามรอบเพราะโควตาหมด ให้ตื่นอีกทีหลังโควตารีเซ็ต (การเช็คไม่กินโควตา)"""
     return max(5, min(MAX_INTERVAL_MINUTES, math.ceil(minutes_until_quota_reset(now)) + 1))
+
+
+def _reschedule_owner(seconds):
+    """เลนเจ้าของสลับจังหวะเองระหว่างโหมดเร่งกับปกติ"""
+    seconds = max(10, int(seconds))
+    if owner_job is None:
+        return seconds
+    try:
+        owner_job.reschedule(trigger="interval", seconds=seconds)
+    except Exception as e:  # noqa: BLE001
+        print(f"[scheduler] reschedule เลนเจ้าของไม่สำเร็จ: {e}", flush=True)
+    return seconds
 
 
 def _reschedule_shared(minutes, persist=True):
@@ -703,7 +813,7 @@ def start_scheduler():
     global scheduler, owner_job, shared_job
     scheduler = BackgroundScheduler(daemon=True)
     owner_job = scheduler.add_job(
-        run_owner, "interval", minutes=OWNER_INTERVAL_MINUTES,
+        run_owner, "interval", seconds=owner_interval_seconds(),
         id="owner", max_instances=1, coalesce=True,
     )
     shared_job = scheduler.add_job(
@@ -711,20 +821,28 @@ def start_scheduler():
         id="shared", max_instances=1, coalesce=True,
     )
     scheduler.start()
+    start, end = burst_window()
+    window = f", โหมดเร่ง {start:%d/%m %H:%M}–{end:%H:%M}" if start and end else ""
     print(
-        f"[scheduler] เลนเจ้าของทุก {OWNER_INTERVAL_MINUTES} นาที, "
+        f"[scheduler] เลนเจ้าของทุก {owner_interval_seconds()} วิ, "
         f"เลนรวมเริ่มที่ {shared_interval_minutes()} นาที "
-        f"(งบ {QUOTA_BUDGET} หน่วย/วัน, ใช้ไปแล้ว {quota_used()})",
+        f"(งบ {QUOTA_BUDGET} หน่วย/วัน, ใช้ไปแล้ว {quota_used()}){window}",
         flush=True,
     )
     return scheduler
 
 
+def human_interval(seconds):
+    """'30 s' / '10 min' — จังหวะเลนเจ้าของสลับหน่วยได้ ป้ายบนหน้าเว็บจึงต้องสลับตาม"""
+    seconds = int(seconds)
+    return f"{seconds} s" if seconds < 60 else f"{round(seconds / 60)} min"
+
+
 def interval_for_user(user):
     """interval ที่ใช้กับผู้ใช้คนนี้จริง ๆ — เอาไปโชว์บน dashboard ให้ตรงความจริง"""
     if user and user["sub"] in owner_subs():
-        return OWNER_INTERVAL_MINUTES, False
-    return shared_interval_minutes(), True
+        return human_interval(owner_interval_seconds()), False
+    return f"{shared_interval_minutes()} min", True
 
 
 # ------------------------------------------------------------------- Routes
@@ -868,8 +986,9 @@ def admin_snapshot(me=None):
         "quota": {
             "used": quota_used(),
             "budget": QUOTA_BUDGET,
-            "owner_interval": OWNER_INTERVAL_MINUTES,
-            "shared_interval": shared_interval_minutes(),
+            "owner_interval": human_interval(owner_interval_seconds()),
+            "shared_interval": f"{shared_interval_minutes()} min",
+            "burst": burst_active(),
         },
         "now": datetime.now().strftime("%H:%M:%S"),
     }

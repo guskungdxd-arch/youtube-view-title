@@ -474,8 +474,13 @@ def test_owner_resolution_matches_is_admin():
     assert app.owner_subs() == {"first"}
     assert app.is_admin(rows["first"]) and not app.is_admin(rows["second"])
 
-    assert app.interval_for_user(rows["first"]) == (app.OWNER_INTERVAL_MINUTES, False)
-    assert app.interval_for_user(rows["second"]) == (app.shared_interval_minutes(), True)
+    # คืนเป็นข้อความพร้อมหน่วย เพราะเลนเจ้าของสลับเป็นวินาทีได้ตอนโหมดเร่ง
+    assert app.interval_for_user(rows["first"]) == (
+        app.human_interval(app.owner_interval_seconds()), False
+    )
+    assert app.interval_for_user(rows["second"]) == (
+        f"{app.shared_interval_minutes()} min", True
+    )
 
 
 def test_run_now_path_keeps_statuses():

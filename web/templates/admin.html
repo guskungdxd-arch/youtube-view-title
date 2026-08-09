@@ -290,7 +290,7 @@
     <p class="live">
       <span class="dot" id="live-dot" aria-hidden="true"></span>
       <span id="live-text">Live &mdash; refreshed at {{ now }}</span>
-      <span class="muted">&middot; owner lane every {{ quota.owner_interval }} min, shared lane every <span data-cell="shared">{{ quota.shared_interval }}</span> min</span>
+      <span class="muted">&middot; owner lane every <span data-cell="owner">{{ quota.owner_interval }}</span>{% if quota.burst %} <b data-cell="burst">[burst]</b>{% else %}<b data-cell="burst"></b>{% endif %}, shared lane every <span data-cell="shared">{{ quota.shared_interval }}</span></span>
     </p>
 
     <div class="card">
@@ -491,6 +491,8 @@
         cell('configured', d.stats.configured);
         cell('quota', d.quota.used);
         cell('shared', d.quota.shared_interval);
+        cell('owner', d.quota.owner_interval);
+        cell('burst', d.quota.burst ? ' [burst]' : '');
         count.textContent = d.rows.length + ' row' + (d.rows.length === 1 ? '' : 's');
         drawRows(d.rows);
         live.classList.remove('stale');
