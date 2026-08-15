@@ -8,8 +8,10 @@ import json
 import math
 import re
 import sqlite3
+import secrets
 import threading
 import time
+from collections import deque
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -115,7 +117,42 @@ PROJECTS = [
         # ไอคอนท่อส่งข้อมูลแบบ pixel — สร้างด้วย tools/make_flow_logo.py
         "logo": "logo-flow.png",
     },
+    {
+        "name": "Snake",
+        "tagline": "One line of code per subscriber.",
+        "description": "A snake game written under a hard budget: the playable game may use only as many lines as the channel has subscribers. The leaderboard around it is scored server-side, so a score has to be earned.",
+        "url": "/snake",
+        "status": "Live",
+        "tags": ["Canvas", "Game loop", "SQLite"],
+        # ไอคอนงูแบบ pixel — สร้างด้วย tools/make_snake_logo.py
+        "logo": "logo-snake.png",
+    },
 ]
+
+# กติกาของชาเลนจ์: โค้ดตัวเกมยาวได้เท่าจำนวนซับ ตัวเลขนี้โชว์บนหน้า /snake
+SNAKE_LINE_BUDGET = int(os.environ.get("SNAKE_LINE_BUDGET", "160"))
+
+# กระดาน 20x20 = 400 ช่อง งูเริ่มยาว 4 → กินได้มากสุด 396 ครั้ง ครั้งละ 10 คะแนน
+SNAKE_MAX_SCORE = 3960
+SNAKE_COOLDOWN_SECONDS = 2
+
+SNAKE_GRID = 20
+SNAKE_BOARD = 400                      # ขนาด canvas เป็นพิกเซล
+SNAKE_CELLS = (SNAKE_BOARD // SNAKE_GRID) ** 2   # 400 ช่อง
+SNAKE_MAX_STEPS = 100_000              # กันส่ง steps มหาศาลมาถ่วงเซิร์ฟเวอร์
+SNAKE_MAX_INPUTS = 20_000
+SNAKE_RUN_TTL = 6 * 3600               # seed ที่ไม่ถูกใช้ ล้างทิ้งหลัง 6 ชม.
+# ต่ำสุดที่เกมเดินได้จริงต่อ 1 step — เกมขยับทุก 6 เฟรม จอ 240Hz ก็ยังได้ ~25ms
+# ใครอ้างว่าเล่นพันสเต็ปในสามวินาที คือปลอม
+SNAKE_MIN_MS_PER_STEP = 20
+
+# ปุ่มลูกศร → ทิศ ต้องตรงกับ e.which ใน snake.html
+SNAKE_KEYS = {
+    37: (-SNAKE_GRID, 0),
+    38: (0, -SNAKE_GRID),
+    39: (SNAKE_GRID, 0),
+    40: (0, SNAKE_GRID),
+}
 
 # ไดอะแกรมบนหน้า /flow — เมนูอยู่ที่ /flow, ตัวไดอะแกรมอยู่ที่ /flow/<slug>
 # เพิ่มไดอะแกรมใหม่ = append dict ที่นี่ + เพิ่มบล็อกในเทมเพลตที่ตรงกับ slug
@@ -172,6 +209,40 @@ def init_db():
                 enabled        INTEGER DEFAULT 0,
                 last_status    TEXT DEFAULT '',
                 updated_at     TEXT
+            )
+            """
+        )
+        # กระดานคะแนนเกมงู — 1 แถวต่อ 1 ผู้ใช้ เก็บเฉพาะคะแนนดีที่สุด
+        # ไม่ผูก FOREIGN KEY กับ users เพราะลบบัญชีแล้วยังอยากให้คะแนนคงอยู่
+        #
+        # แยกเวลาสองตัวโดยตั้งใจ:
+        #   best_at    = ตอนที่ทำคะแนนสูงสุดนี้ได้ ไม่ขยับถ้าส่งคะแนนที่ต่ำกว่ามา
+        #                ใช้ตัดสิน "ใครเก็บเต็มกระดานได้ก่อน" จึงห้ามถูกเขียนทับ
+        #   updated_at = ตอนส่งครั้งล่าสุด ใช้ทำ cooldown อย่างเดียว
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS snake_scores (
+                sub        TEXT PRIMARY KEY,
+                name       TEXT NOT NULL,
+                score      INTEGER NOT NULL,
+                best_at    REAL NOT NULL,
+                updated_at REAL NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS snake_scores_score_idx"
+            " ON snake_scores (score DESC)"
+        )
+        # seed ที่แจกไปแล้วรอผู้เล่นส่งผลกลับมา หนึ่งใบต่อหนึ่งเกม ใช้ซ้ำไม่ได้
+        # ถ้าไม่มีตารางนี้ ใครอัดคลิปการเล่นที่ชนะไว้ครั้งเดียว จะส่งซ้ำได้ไม่จำกัด
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS snake_runs (
+                game_id   TEXT PRIMARY KEY,
+                sub       TEXT NOT NULL,
+                seed      INTEGER NOT NULL,
+                issued_at REAL NOT NULL
             )
             """
         )
@@ -1064,6 +1135,270 @@ def channel():
     )
 
 
+# ------------------------------------------------------------------- Snake
+def count_snake_game_lines():
+    """นับบรรทัดโค้ดเกมจริงจากเทมเพลต ระหว่างมาร์ก game-code:start/end
+
+    หน้าเว็บโฆษณาว่าเกมยาวกี่บรรทัด ถ้าพิมพ์ตัวเลขตายตัวไว้ วันหนึ่งแก้เกมแล้ว
+    ลืมแก้ตัวเลข หน้าเว็บก็จะโกหกทันที — อ่านจากไฟล์จึงไม่มีทางหลุด
+    """
+    path = os.path.join(BASE_DIR, "templates", "snake.html")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            lines = fh.read().splitlines()
+        start = next(i for i, ln in enumerate(lines) if "game-code:start" in ln)
+        end = next(i for i, ln in enumerate(lines) if "game-code:end" in ln)
+    except (OSError, StopIteration):
+        return None
+    return end - start - 1
+
+
+# อ่านครั้งเดียวตอน import — เทมเพลตไม่เปลี่ยนระหว่างรัน
+SNAKE_GAME_LINES = count_snake_game_lines()
+
+
+def snake_replay(seed, inputs, steps):
+    """เล่นเกมซ้ำจาก seed + ลำดับปุ่มที่กด แล้วคืน (score, จบที่สเต็ปไหน)
+
+    ตรรกะทุกบรรทัดต้องตรงกับในเทมเพลต snake.html ถ้าแก้ที่นั่นต้องแก้ที่นี่ด้วย
+    ไม่งั้นการเล่นที่ถูกต้องจะถูกปฏิเสธ
+
+    ตัวสุ่มใช้ Park–Miller เพราะผลคูณสูงสุด 16807 × 2^31 ยังไม่ถึง 2^53
+    เลข double ของ JS จึงคำนวณได้ตรงกับ int ของ Python เป๊ะ ๆ ไม่มีปัดเศษ
+    และหยิบช่องด้วย % (จำนวนเต็ม) ไม่ใช่คูณ float เพื่อตัดความต่างของทศนิยมทิ้งไป
+    """
+    state = seed % 2147483647
+    if state <= 0:
+        state += 2147483646
+
+    def rand(n):
+        nonlocal state
+        state = (state * 16807) % 2147483647
+        return state % n
+
+    x, y = 160, 160
+    dx, dy = SNAKE_GRID, 0
+    cells = deque()
+    occupied = set()          # ช่องที่งูทับอยู่ ดูแลแบบเพิ่ม/ลบทีละช่อง
+    max_cells = 4
+    score = 0
+    food = (320, 320)
+
+    def place_food():
+        free = [
+            (fx, fy)
+            for fx in range(0, SNAKE_BOARD, SNAKE_GRID)
+            for fy in range(0, SNAKE_BOARD, SNAKE_GRID)
+            if (fx, fy) not in occupied
+        ]
+        return free[rand(len(free))] if free else food
+
+    by_step = {}
+    for st, key in inputs:
+        by_step.setdefault(st, []).append(key)
+
+    food = place_food()       # resetGame() วางอาหารชิ้นแรกตอนงูยังไม่มีตัว
+
+    for s in range(1, steps + 1):
+        for key in by_step.get(s - 1, ()):
+            ndx, ndy = SNAKE_KEYS[key]
+            if ndx and dx == 0:
+                dx, dy = ndx, 0
+            elif ndy and dy == 0:
+                dx, dy = 0, ndy
+
+        x = (x + dx) % SNAKE_BOARD          # ทะลุขอบไปโผล่อีกฝั่ง
+        y = (y + dy) % SNAKE_BOARD
+        head = (x, y)
+
+        cells.appendleft(head)
+        if len(cells) > max_cells:
+            # หัวไปทับ "ช่องที่หางกำลังจะออก" พอดี ไม่นับว่าชน — ตรงกับ JS
+            # ที่ pop ก่อนแล้วค่อยเช็คซ้ำ ลำดับตรงนี้จึงห้ามสลับ
+            occupied.discard(cells.pop())
+        if head in occupied:
+            return score, s
+        occupied.add(head)
+
+        if head == food:
+            max_cells += 1
+            score += 10
+            food = place_food()
+
+        if max_cells >= SNAKE_CELLS:
+            return score, s
+
+    return score, None                       # เล่นครบแล้วยังไม่จบ = ไม่ตรงกับที่อ้าง
+
+
+def snake_check_inputs(raw):
+    """รับ [[step, key], ...] จากเบราว์เซอร์ คืน list ที่สะอาดแล้ว หรือ None ถ้าเชื่อไม่ได้"""
+    if not isinstance(raw, list) or len(raw) > SNAKE_MAX_INPUTS:
+        return None
+    out = []
+    for item in raw:
+        if not isinstance(item, list) or len(item) != 2:
+            return None
+        st, key = item
+        if not isinstance(st, int) or isinstance(st, bool):
+            return None
+        if not isinstance(key, int) or isinstance(key, bool):
+            return None
+        if st < 0 or st > SNAKE_MAX_STEPS or key not in SNAKE_KEYS:
+            return None
+        out.append((st, key))
+    return out
+
+
+def snake_display_name(user):
+    """ชื่อที่โชว์บนกระดาน — users ไม่มีคอลัมน์ชื่อ จึงใช้ส่วนหน้า @ ของอีเมล"""
+    return (user["email"] or "player").split("@")[0][:12]
+
+
+def snake_top(limit=10):
+    """คะแนนเท่ากันให้คนที่ทำได้ก่อนอยู่บนกว่า — ตัดสินด้วย best_at"""
+    with db() as conn:
+        rows = conn.execute(
+            "SELECT name, score FROM snake_scores"
+            " ORDER BY score DESC, best_at ASC LIMIT ?",
+            (limit,),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def snake_first_perfect():
+    """คนแรกที่เก็บเต็มกระดาน (3960 = กินครบทุกช่อง) หรือ None ถ้ายังไม่มีใครทำได้"""
+    with db() as conn:
+        row = conn.execute(
+            "SELECT name, best_at FROM snake_scores WHERE score >= ?"
+            " ORDER BY best_at ASC LIMIT 1",
+            (SNAKE_MAX_SCORE,),
+        ).fetchone()
+    if not row:
+        return None
+    return {
+        "name": row["name"],
+        "at": datetime.fromtimestamp(row["best_at"]).strftime("%Y-%m-%d"),
+    }
+
+
+@app.route("/snake")
+def snake():
+    """หน้าสาธารณะ: เกมงู เล่นได้เลย แต่ต้องล็อกอินถึงจะบันทึกคะแนน"""
+    return render_template(
+        "snake.html", user=current_user(), line_budget=SNAKE_LINE_BUDGET,
+        game_lines=SNAKE_GAME_LINES,
+    )
+
+
+@app.route("/api/snake/scores", methods=["GET"])
+def snake_scores():
+    user = current_user()
+    return jsonify({
+        "me": snake_display_name(user) if user else None,
+        "top": snake_top(),
+        "perfect_score": SNAKE_MAX_SCORE,
+        "first_perfect": snake_first_perfect(),
+    })
+
+
+@app.route("/api/snake/start", methods=["POST"])
+def snake_start():
+    """แจก seed หนึ่งใบให้เกมที่กำลังจะเริ่ม — ผลจะถูกรับก็ต่อเมื่ออ้าง game_id ใบนี้"""
+    user = current_user()
+    if not user:
+        return jsonify({"error": "login_required"}), 401
+
+    game_id = secrets.token_urlsafe(16)
+    seed = secrets.randbelow(2147483646) + 1
+    now = time.time()
+    with db() as conn:
+        conn.execute("DELETE FROM snake_runs WHERE issued_at < ?",
+                     (now - SNAKE_RUN_TTL,))
+        conn.execute(
+            "INSERT INTO snake_runs (game_id, sub, seed, issued_at) VALUES (?,?,?,?)",
+            (game_id, user["sub"], seed, now),
+        )
+    return jsonify({"game_id": game_id, "seed": seed})
+
+
+@app.route("/api/snake/scores", methods=["POST"])
+def snake_submit():
+    user = current_user()
+    if not user:
+        return jsonify({"error": "login_required"}), 401
+
+    body = request.get_json(silent=True) or {}
+    game_id = body.get("game_id")
+    steps = body.get("steps")
+    inputs = snake_check_inputs(body.get("inputs"))
+
+    if not isinstance(game_id, str) or inputs is None:
+        return jsonify({"error": "bad_run"}), 400
+    if not isinstance(steps, int) or isinstance(steps, bool):
+        return jsonify({"error": "bad_run"}), 400
+    if steps <= 0 or steps > SNAKE_MAX_STEPS:
+        return jsonify({"error": "bad_run"}), 400
+
+    now = time.time()
+    with db() as conn:
+        run = conn.execute(
+            "SELECT seed, issued_at FROM snake_runs WHERE game_id=? AND sub=?",
+            (game_id, user["sub"]),
+        ).fetchone()
+        # ลบทิ้งทันทีไม่ว่าผลจะผ่านหรือไม่ — หนึ่ง seed เล่นได้ครั้งเดียว
+        if run:
+            conn.execute("DELETE FROM snake_runs WHERE game_id=?", (game_id,))
+
+    if not run:
+        return jsonify({"error": "unknown_run"}), 400
+
+    # เล่นเร็วกว่าที่เกมเดินได้จริงไม่ได้ ต่อให้ input ถูกต้องทุกตัว
+    if (now - run["issued_at"]) * 1000 < steps * SNAKE_MIN_MS_PER_STEP:
+        return jsonify({"error": "too_fast_to_be_real"}), 400
+
+    # จุดสำคัญ: คะแนนมาจากการเล่นซ้ำฝั่งเซิร์ฟเวอร์ ไม่ได้มาจากเบราว์เซอร์เลย
+    score, ended_at = snake_replay(run["seed"], inputs, steps)
+    if ended_at != steps:
+        return jsonify({"error": "run_did_not_end_there"}), 400
+    if score <= 0:
+        return jsonify({
+            "ok": True, "score": 0, "top": snake_top(),
+            "perfect_score": SNAKE_MAX_SCORE,
+            "first_perfect": snake_first_perfect(),
+        })
+
+    # ไม่ต้องมี cooldown แล้ว: ทุกเกมต้องขอ seed ใหม่จากเซิร์ฟเวอร์ และต้องใช้เวลา
+    # เดินจริงตามจำนวนสเต็ป การยิงรัวจึงเป็นไปไม่ได้ตั้งแต่ต้นทาง
+    with db() as conn:
+        # 1 คน 1 อันดับ ส่งคะแนนต่ำกว่าเดิมมาก็ไม่ทับของเก่า
+        # best_at ขยับเฉพาะตอนทำคะแนนได้ดีขึ้นจริง ๆ เท่านั้น เพราะมันคือหลักฐาน
+        # ว่าใครเก็บเต็มกระดานได้ก่อน — SQLite อ่านค่าฝั่งขวาจากแถวเดิมทั้งหมด
+        # ลำดับของ SET จึงไม่กวนกันเอง
+        conn.execute(
+            """
+            INSERT INTO snake_scores (sub, name, score, best_at, updated_at)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(sub) DO UPDATE SET
+                name       = excluded.name,
+                best_at    = CASE WHEN excluded.score > snake_scores.score
+                                  THEN excluded.best_at
+                                  ELSE snake_scores.best_at END,
+                score      = MAX(snake_scores.score, excluded.score),
+                updated_at = excluded.updated_at
+            """,
+            (user["sub"], snake_display_name(user), score, now, now),
+        )
+
+    return jsonify({
+        "ok": True,
+        "score": score,
+        "top": snake_top(),
+        "perfect_score": SNAKE_MAX_SCORE,
+        "first_perfect": snake_first_perfect(),
+    })
+
+
 @app.route("/privacy")
 def privacy():
     return render_template("privacy.html", contact=CONTACT_EMAIL)
@@ -1097,6 +1432,9 @@ def delete_account():
         pass
     with db() as conn:
         conn.execute("DELETE FROM users WHERE sub=?", (user["sub"],))
+        # คะแนนเกมงูผูกกับ sub และชื่อมาจากอีเมล = ข้อมูลส่วนบุคคล
+        # ลบบัญชีแล้วต้องลบด้วย ไม่งั้นขัดกับ /privacy ที่สัญญาว่าลบหมด
+        conn.execute("DELETE FROM snake_scores WHERE sub=?", (user["sub"],))
     session.clear()
     return redirect(url_for("viewtitle"))
 
