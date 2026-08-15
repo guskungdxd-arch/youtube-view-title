@@ -74,15 +74,27 @@ update logic → routes). Notable wiring:
 - **Per-user credentials** live in the `users.credentials` column as `Credentials.to_json()`.
   `update_one_user()` refreshes and re-persists them when expired.
 - **Admin**: `is_admin()` grants access to whoever is in `ADMIN_EMAILS`, falling back to
-  the first row in `users` (the deployer) when that env var is unset.
+  the first row in `users` (the deployer) when that env var is unset. `/admin/data` and
+  the `/admin/snake/*` actions send back the same `admin_snapshot()` blob, which
+  deliberately drops `sub` and `credentials` before it reaches the browser.
+- **Snake speed**: adjustable from `/admin`, stored in `settings`, injected into the game
+  loop by the template. The anti-cheat floor (`snake_min_ms_per_step()`) is **derived**
+  from it and the speed in force is stamped on each issued seed — pinning that floor to a
+  constant would reject honest players the moment the game is sped up.
 - **Scheduler**: `run_all()` is registered at import time when `RUN_SCHEDULER=1`, so
   **gunicorn must run `--workers 1`** — extra workers would each start their own
   scheduler and multiply API calls.
 
 ### Database
-One SQLite table, `users`, keyed by the Google `sub`. Created on import by `init_db()`;
-there are no migrations, so adding a column means handling it manually on the server.
-`DATABASE_PATH` overrides the location.
+Tables: `users` (keyed by the Google `sub`), `snake_scores` / `snake_runs` (the game
+leaderboard and its outstanding seeds), and `settings` (key/value, for the things admin
+can change at runtime). All created on import by `init_db()`; `DATABASE_PATH` overrides
+the location.
+
+There is no migration framework. `CREATE TABLE IF NOT EXISTS` skips an existing table
+whole, so a **new column on a deployed table must go through `add_column()`** — it
+checks `PRAGMA table_info` first and is safe to re-run. Adding one to the `CREATE TABLE`
+alone changes nothing on the server.
 
 ## Constraints that shaped this code
 

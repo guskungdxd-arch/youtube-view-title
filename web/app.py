@@ -142,9 +142,44 @@ SNAKE_CELLS = (SNAKE_BOARD // SNAKE_GRID) ** 2   # 400 ช่อง
 SNAKE_MAX_STEPS = 100_000              # กันส่ง steps มหาศาลมาถ่วงเซิร์ฟเวอร์
 SNAKE_MAX_INPUTS = 20_000
 SNAKE_RUN_TTL = 6 * 3600               # seed ที่ไม่ถูกใช้ ล้างทิ้งหลัง 6 ชม.
-# ต่ำสุดที่เกมเดินได้จริงต่อ 1 step — เกมขยับทุก 6 เฟรม จอ 240Hz ก็ยังได้ ~25ms
-# ใครอ้างว่าเล่นพันสเต็ปในสามวินาที คือปลอม
-SNAKE_MIN_MS_PER_STEP = 20
+
+# ความเร็วเกม = งูขยับ 1 ช่องทุกกี่เฟรมจอ ยิ่งเลขน้อยยิ่งเร็ว แอดมินปรับได้ที่ /admin
+# 6 คือค่าที่ใช้มาแต่แรก ต้องเป็นค่าตั้งต้นเพื่อไม่ให้คะแนนเก่าเทียบกับของใหม่ไม่ได้
+SNAKE_SPEED_KEY = "snake_frames_per_step"
+SNAKE_SPEED_DEFAULT = 6
+SNAKE_SPEED_MIN = 2                    # ~120 ก้าว/วินาทีบนจอ 240Hz เร็วกว่านี้คุมไม่ไหว
+SNAKE_SPEED_MAX = 12                   # ช้ากว่านี้เริ่มน่าเบื่อ
+
+
+def snake_frames_per_step():
+    return get_int_setting(
+        SNAKE_SPEED_KEY, SNAKE_SPEED_DEFAULT, SNAKE_SPEED_MIN, SNAKE_SPEED_MAX
+    )
+
+
+def snake_speed_label(frames):
+    """ชื่อความเร็วแบบคนอ่านรู้เรื่อง — เลขเฟรมดิบสื่อกลับด้าน (น้อย = เร็ว)"""
+    if frames <= 3:
+        return "Blazing"
+    if frames <= 5:
+        return "Fast"
+    if frames == SNAKE_SPEED_DEFAULT:
+        return "Normal"
+    if frames <= 9:
+        return "Relaxed"
+    return "Slow"
+
+
+def snake_min_ms_per_step(frames):
+    """ต่ำสุดที่เกมเดินได้จริงต่อ 1 step ที่ความเร็วนี้
+
+    เกมขยับทุก N เฟรม จอที่เร็วที่สุดที่เจอจริงคือ 240Hz → N × 4.17ms แล้วหย่อนอีก 20%
+    เผื่อความคลาดเคลื่อนของนาฬิกา ที่ N=6 ได้ 20ms เท่าค่าเดิมเป๊ะ
+
+    ต้องคิดจากความเร็วจริงเสมอ ถ้าตรึงไว้ที่ 20 แล้วแอดมินเร่งเกมให้เร็วขึ้น
+    คนที่เล่นจบเร็วตามเกมจะโดนปฏิเสธว่าโกงทั้งที่เล่นถูกต้อง
+    """
+    return max(1, int(frames * 1000 / 240 * 0.8))
 
 # ปุ่มลูกศร → ทิศ ต้องตรงกับ e.which ใน snake.html
 SNAKE_KEYS = {
@@ -187,6 +222,10 @@ FLOWS_BY_SLUG = {f["slug"]: f for f in FLOWS}
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET", "dev-secret-change-me")
+# เบราว์เซอร์สมัยใหม่ถือว่า Lax เป็นค่าเริ่มต้นอยู่แล้ว แต่เขียนไว้ให้ชัด เพราะหน้า admin
+# มีปุ่มลบข้อมูลถาวร — Lax กัน POST ข้ามเว็บ ส่วน redirect กลับจาก Google เป็น GET
+# ระดับบนสุด จึงยังผ่านได้ตามเดิม
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
 
 # ---------------------------------------------------------------- ฐานข้อมูล
@@ -194,6 +233,17 @@ def db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def add_column(conn, table, column, decl):
+    """เพิ่มคอลัมน์ถ้ายังไม่มี — เรียกซ้ำกี่ครั้งก็ไม่พัง
+
+    รีโปนี้ไม่มีระบบ migration ตารางที่ deploy ไปแล้วจึงแก้ด้วย CREATE TABLE
+    IF NOT EXISTS ไม่ได้ (มันข้ามตารางที่มีอยู่ทั้งใบ) ต้อง ALTER เอาเอง
+    """
+    have = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
+    if column not in have:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
 
 
 def init_db():
@@ -246,6 +296,52 @@ def init_db():
             )
             """
         )
+        # ค่าที่แอดมินปรับได้ตอนรัน — เก็บใน DB ไม่ใช่ env เพราะต้องเปลี่ยนได้
+        # โดยไม่ restart (restart = scheduler เริ่มนับรอบใหม่)
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS settings (
+                key   TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            )
+            """
+        )
+
+        # --- คอลัมน์ที่เพิ่มทีหลัง (เซิร์ฟเวอร์จริงมีตารางเดิมอยู่แล้ว) ---
+        # plays/last_played มีไว้ตอบคำถาม "ใครแวะมาเล่นบ้าง" ไม่ใช่แค่ "ใครทำคะแนนได้"
+        add_column(conn, "snake_scores", "plays", "INTEGER NOT NULL DEFAULT 0")
+        add_column(conn, "snake_scores", "last_played", "REAL")
+        # ความเร็วตอนที่ทำคะแนนสูงสุดนั้นได้ — คะแนนที่ทำตอนเกมช้าเทียบกับตอนเกมเร็ว
+        # ตรง ๆ ไม่ได้ ถ้าจะแจกรางวัลต้องเห็นตัวเลขนี้ประกอบ
+        add_column(conn, "snake_scores", "best_frames", "INTEGER")
+        # ความเร็วที่ใช้ตอนแจก seed ใบนั้น — ล็อกไว้กับเกมที่กำลังเล่นค้างอยู่
+        # ถ้าแอดมินเปลี่ยนความเร็วกลางคัน เกมที่เล่นค้างต้องถูกตรวจด้วยค่าเดิม
+        add_column(conn, "snake_runs", "frames", "INTEGER")
+
+
+# ------------------------------------------------------------ ค่าที่ปรับได้
+def get_setting(key, default=None):
+    with db() as conn:
+        row = conn.execute("SELECT value FROM settings WHERE key=?", (key,)).fetchone()
+    return row["value"] if row else default
+
+
+def set_setting(key, value):
+    with db() as conn:
+        conn.execute(
+            "INSERT INTO settings (key, value) VALUES (?,?)"
+            " ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+            (key, str(value)),
+        )
+
+
+def get_int_setting(key, default, low, high):
+    """อ่านค่าตัวเลขแบบไม่ยอมให้ค่าเสียในฐานข้อมูลทำเว็บพัง — นอกช่วง = ใช้ค่าตั้งต้น"""
+    try:
+        value = int(get_setting(key, default))
+    except (TypeError, ValueError):
+        return default
+    return value if low <= value <= high else default
 
 
 # ------------------------------------------------------------- นับโควตา API
@@ -1035,6 +1131,65 @@ _ADMIN_COLUMNS = (
 )
 
 
+def _stamp(value):
+    """เวลาแบบ epoch → อ่านออก; None → ขีด"""
+    if not value:
+        return "—"
+    return datetime.fromtimestamp(value).strftime("%Y-%m-%d %H:%M")
+
+
+def snake_players(me=None):
+    """ผู้เล่นทุกคนพร้อมอีเมล — ใช้เฉพาะหน้า admin
+
+    ต่อ users เข้ามาเพื่อเอาอีเมลไว้ติดต่อกลับตอนแจกรางวัล ใช้ LEFT JOIN เพราะ
+    คนที่ลบบัญชีไปแล้วอาจไม่มีแถวใน users แต่คะแนนยังอยู่ (แถวนั้นจะไม่มีอีเมล)
+
+    ส่ง rowid ออกไปเป็น id ให้ปุ่มลบอ้างถึงได้ — ไม่ส่ง sub ซึ่งเป็น id ของ Google
+    ด้วยเหตุผลเดียวกับตารางผู้ใช้ข้างบน
+    """
+    with db() as conn:
+        rows = conn.execute(
+            """
+            SELECT s.rowid AS id, s.sub, s.name, s.score, s.plays,
+                   s.best_at, s.last_played, s.best_frames, u.email
+            FROM snake_scores s
+            LEFT JOIN users u ON u.sub = s.sub
+            ORDER BY s.score DESC, s.best_at ASC
+            """
+        ).fetchall()
+
+    out = []
+    for r in rows:
+        row = dict(r)
+        row["is_me"] = me is not None and row.pop("sub") == me["sub"]
+        row["plays"] = row["plays"] or 0
+        row["best_at"] = _stamp(row["best_at"]) if row["score"] else "—"
+        row["last_played"] = _stamp(row["last_played"])
+        row["email"] = row["email"] or ""
+        row["perfect"] = row["score"] >= SNAKE_MAX_SCORE
+        out.append(row)
+    return out
+
+
+def snake_admin_block(me=None):
+    frames = snake_frames_per_step()
+    players = snake_players(me)
+    return {
+        "speed": frames,
+        "speed_label": snake_speed_label(frames),
+        "speed_min": SNAKE_SPEED_MIN,
+        "speed_max": SNAKE_SPEED_MAX,
+        "speed_default": SNAKE_SPEED_DEFAULT,
+        "perfect_score": SNAKE_MAX_SCORE,
+        "players": players,
+        "totals": {
+            "players": len(players),
+            "plays": sum(p["plays"] for p in players),
+            "best": max((p["score"] for p in players), default=0),
+        },
+    }
+
+
 def admin_snapshot(me=None):
     """ทุกอย่างที่หน้า admin แสดง — อ่าน SQLite กับไฟล์โควตาเท่านั้น ไม่ยิง YouTube API"""
     with db() as conn:
@@ -1048,6 +1203,7 @@ def admin_snapshot(me=None):
         # เทียบ sub แล้วทิ้ง ไม่ส่ง id ของ Google ออกไปกับ JSON ทั้งที่หน้าเว็บไม่ได้ใช้
         row["is_me"] = me is not None and row.pop("sub") == me["sub"]
     return {
+        "snake": snake_admin_block(me),
         "rows": rows,
         "stats": {
             "total": len(rows),
@@ -1084,6 +1240,61 @@ def admin_data():
     user = current_user()
     if not is_admin(user):
         abort(403)
+    return jsonify(admin_snapshot(user))
+
+
+# --- ปุ่มบนหน้า admin ---------------------------------------------------------
+# ทั้งสามอันคืน snapshot ชุดใหม่กลับไปเลย หน้าเว็บจะได้วาดทับได้ทันทีโดยไม่ต้อง
+# รอรอบ poll ถัดไป (แบบเดียวกับที่หน้านี้รีเฟรชตัวเองอยู่แล้ว)
+def _admin_or_403():
+    user = current_user()
+    if not is_admin(user):
+        abort(403)
+    return user
+
+
+@app.route("/admin/snake/speed", methods=["POST"])
+def admin_snake_speed():
+    """ตั้งความเร็วเกม — มีผลกับเกมที่ขอ seed ใหม่หลังจากนี้เท่านั้น"""
+    user = _admin_or_403()
+    frames = (request.get_json(silent=True) or {}).get("frames")
+    if not isinstance(frames, int) or isinstance(frames, bool):
+        return jsonify({"error": "bad_speed"}), 400
+    if not SNAKE_SPEED_MIN <= frames <= SNAKE_SPEED_MAX:
+        return jsonify({"error": "out_of_range"}), 400
+    set_setting(SNAKE_SPEED_KEY, frames)
+    return jsonify(admin_snapshot(user))
+
+
+@app.route("/admin/snake/delete", methods=["POST"])
+def admin_snake_delete():
+    """ลบประวัติของผู้เล่นคนเดียว — คะแนน จำนวนครั้งที่เล่น และ seed ที่ค้างอยู่"""
+    user = _admin_or_403()
+    player_id = (request.get_json(silent=True) or {}).get("id")
+    if not isinstance(player_id, int) or isinstance(player_id, bool):
+        return jsonify({"error": "bad_id"}), 400
+
+    with db() as conn:
+        row = conn.execute(
+            "SELECT sub FROM snake_scores WHERE rowid=?", (player_id,)
+        ).fetchone()
+        if row is None:
+            return jsonify({"error": "not_found"}), 404
+        conn.execute("DELETE FROM snake_scores WHERE rowid=?", (player_id,))
+        # seed ที่แจกไปแล้วต้องไปด้วย ไม่งั้นเกมที่ค้างอยู่ส่งผลกลับมาแล้วแถวโผล่ใหม่
+        conn.execute("DELETE FROM snake_runs WHERE sub=?", (row["sub"],))
+    return jsonify(admin_snapshot(user))
+
+
+@app.route("/admin/snake/clear", methods=["POST"])
+def admin_snake_clear():
+    """ล้างกระดานทั้งใบ — ต้องส่ง confirm มาด้วย กันมือลั่นลบของทุกคนทิ้ง"""
+    user = _admin_or_403()
+    if (request.get_json(silent=True) or {}).get("confirm") is not True:
+        return jsonify({"error": "confirm_required"}), 400
+    with db() as conn:
+        conn.execute("DELETE FROM snake_scores")
+        conn.execute("DELETE FROM snake_runs")
     return jsonify(admin_snapshot(user))
 
 
@@ -1256,10 +1467,14 @@ def snake_display_name(user):
 
 
 def snake_top(limit=10):
-    """คะแนนเท่ากันให้คนที่ทำได้ก่อนอยู่บนกว่า — ตัดสินด้วย best_at"""
+    """คะแนนเท่ากันให้คนที่ทำได้ก่อนอยู่บนกว่า — ตัดสินด้วย best_at
+
+    ตัด score = 0 ทิ้ง เพราะตอนนี้ทุกเกมที่เล่นจบถูกบันทึกแถวไว้ (หน้า admin ใช้นับ
+    จำนวนครั้งที่เล่น) คนที่ยังไม่เคยได้แต้มจึงต้องไม่ไปโผล่บนกระดานสาธารณะ
+    """
     with db() as conn:
         rows = conn.execute(
-            "SELECT name, score FROM snake_scores"
+            "SELECT name, score FROM snake_scores WHERE score > 0"
             " ORDER BY score DESC, best_at ASC LIMIT ?",
             (limit,),
         ).fetchall()
@@ -1285,9 +1500,11 @@ def snake_first_perfect():
 @app.route("/snake")
 def snake():
     """หน้าสาธารณะ: เกมงู เล่นได้เลย แต่ต้องล็อกอินถึงจะบันทึกคะแนน"""
+    frames = snake_frames_per_step()
     return render_template(
         "snake.html", user=current_user(), line_budget=SNAKE_LINE_BUDGET,
-        game_lines=SNAKE_GAME_LINES,
+        game_lines=SNAKE_GAME_LINES, frames_per_step=frames,
+        speed_label=snake_speed_label(frames), speed_default=SNAKE_SPEED_DEFAULT,
     )
 
 
@@ -1312,12 +1529,14 @@ def snake_start():
     game_id = secrets.token_urlsafe(16)
     seed = secrets.randbelow(2147483646) + 1
     now = time.time()
+    frames = snake_frames_per_step()
     with db() as conn:
         conn.execute("DELETE FROM snake_runs WHERE issued_at < ?",
                      (now - SNAKE_RUN_TTL,))
         conn.execute(
-            "INSERT INTO snake_runs (game_id, sub, seed, issued_at) VALUES (?,?,?,?)",
-            (game_id, user["sub"], seed, now),
+            "INSERT INTO snake_runs (game_id, sub, seed, issued_at, frames)"
+            " VALUES (?,?,?,?,?)",
+            (game_id, user["sub"], seed, now, frames),
         )
     return jsonify({"game_id": game_id, "seed": seed})
 
@@ -1343,7 +1562,7 @@ def snake_submit():
     now = time.time()
     with db() as conn:
         run = conn.execute(
-            "SELECT seed, issued_at FROM snake_runs WHERE game_id=? AND sub=?",
+            "SELECT seed, issued_at, frames FROM snake_runs WHERE game_id=? AND sub=?",
             (game_id, user["sub"]),
         ).fetchone()
         # ลบทิ้งทันทีไม่ว่าผลจะผ่านหรือไม่ — หนึ่ง seed เล่นได้ครั้งเดียว
@@ -1353,20 +1572,18 @@ def snake_submit():
     if not run:
         return jsonify({"error": "unknown_run"}), 400
 
+    # ตรวจด้วยความเร็ว "ตอนที่แจก seed ใบนี้" ไม่ใช่ความเร็วปัจจุบัน — แอดมินอาจกด
+    # เปลี่ยนความเร็วระหว่างที่คนนี้กำลังเล่นอยู่ แถวเก่าที่ยังไม่มีคอลัมน์นี้ = ค่าตั้งต้น
+    frames = run["frames"] or SNAKE_SPEED_DEFAULT
+
     # เล่นเร็วกว่าที่เกมเดินได้จริงไม่ได้ ต่อให้ input ถูกต้องทุกตัว
-    if (now - run["issued_at"]) * 1000 < steps * SNAKE_MIN_MS_PER_STEP:
+    if (now - run["issued_at"]) * 1000 < steps * snake_min_ms_per_step(frames):
         return jsonify({"error": "too_fast_to_be_real"}), 400
 
     # จุดสำคัญ: คะแนนมาจากการเล่นซ้ำฝั่งเซิร์ฟเวอร์ ไม่ได้มาจากเบราว์เซอร์เลย
     score, ended_at = snake_replay(run["seed"], inputs, steps)
     if ended_at != steps:
         return jsonify({"error": "run_did_not_end_there"}), 400
-    if score <= 0:
-        return jsonify({
-            "ok": True, "score": 0, "top": snake_top(),
-            "perfect_score": SNAKE_MAX_SCORE,
-            "first_perfect": snake_first_perfect(),
-        })
 
     # ไม่ต้องมี cooldown แล้ว: ทุกเกมต้องขอ seed ใหม่จากเซิร์ฟเวอร์ และต้องใช้เวลา
     # เดินจริงตามจำนวนสเต็ป การยิงรัวจึงเป็นไปไม่ได้ตั้งแต่ต้นทาง
@@ -1375,19 +1592,29 @@ def snake_submit():
         # best_at ขยับเฉพาะตอนทำคะแนนได้ดีขึ้นจริง ๆ เท่านั้น เพราะมันคือหลักฐาน
         # ว่าใครเก็บเต็มกระดานได้ก่อน — SQLite อ่านค่าฝั่งขวาจากแถวเดิมทั้งหมด
         # ลำดับของ SET จึงไม่กวนกันเอง
+        #
+        # เกมที่ได้ 0 ก็บันทึกแถวนี้เหมือนกัน เพราะหน้า admin ต้องตอบให้ได้ว่า
+        # "ใครแวะมาเล่นบ้าง" ไม่ใช่แค่ "ใครทำคะแนนได้" — กระดานสาธารณะกรอง
+        # score > 0 ออกไปอยู่แล้ว คนที่ยังไม่เคยได้แต้มจึงไม่โผล่ให้คนอื่นเห็น
         conn.execute(
             """
-            INSERT INTO snake_scores (sub, name, score, best_at, updated_at)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO snake_scores
+                (sub, name, score, best_at, updated_at, plays, last_played, best_frames)
+            VALUES (?, ?, ?, ?, ?, 1, ?, ?)
             ON CONFLICT(sub) DO UPDATE SET
-                name       = excluded.name,
-                best_at    = CASE WHEN excluded.score > snake_scores.score
-                                  THEN excluded.best_at
-                                  ELSE snake_scores.best_at END,
-                score      = MAX(snake_scores.score, excluded.score),
-                updated_at = excluded.updated_at
+                name        = excluded.name,
+                best_at     = CASE WHEN excluded.score > snake_scores.score
+                                   THEN excluded.best_at
+                                   ELSE snake_scores.best_at END,
+                best_frames = CASE WHEN excluded.score > snake_scores.score
+                                   THEN excluded.best_frames
+                                   ELSE snake_scores.best_frames END,
+                score       = MAX(snake_scores.score, excluded.score),
+                updated_at  = excluded.updated_at,
+                plays       = snake_scores.plays + 1,
+                last_played = excluded.last_played
             """,
-            (user["sub"], snake_display_name(user), score, now, now),
+            (user["sub"], snake_display_name(user), score, now, now, now, frames),
         )
 
     return jsonify({
