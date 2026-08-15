@@ -355,6 +355,12 @@
           <span class="cap">Your best</span>
           <span class="n" id="highScore">0</span>
         </li>
+        {# ความเร็วปรับได้จากหน้า admin — ต้องโชว์ไว้ ไม่งั้นวันที่มันเปลี่ยน
+           ผู้เล่นจะงงว่าทำไมเกมไม่เหมือนเดิม #}
+        <li>
+          <span class="cap">Speed</span>
+          <span class="n">{{ speed_label }}</span>
+        </li>
       </ul>
 
       <div class="screen">
@@ -519,7 +525,7 @@
             return;
         }
 
-        if (++count < 6) {
+        if (++count < {{ frames_per_step }}) {
             return;
         }
         count = 0;

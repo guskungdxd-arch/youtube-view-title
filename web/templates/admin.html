@@ -228,6 +228,39 @@
     .off { background:var(--chip); color:var(--text); }
     .muted { color:var(--sub); }
     td.muted { color:var(--sub); }
+    /* ── Snake panel: speed dial + who has been playing ─────────────────── */
+    .btn {
+      font-family:var(--label); font-weight:700; font-size:.58rem; letter-spacing:.08em;
+      text-transform:uppercase; padding:8px 12px; cursor:pointer; color:var(--text);
+      background:var(--chip); border:2px solid var(--border); box-shadow:2px 2px 0 var(--shadow);
+    }
+    .btn:hover:not([disabled]) { color:var(--link); }
+    .btn:active:not([disabled]) { transform:translate(2px,2px); box-shadow:none; }
+    .btn[disabled] { opacity:.4; cursor:not-allowed; }
+    .btn.danger { color:var(--hot-ink); }
+    .btn.tiny { padding:5px 9px; font-size:.52rem; }
+    .dial {
+      display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+      padding:16px; border-bottom:3px solid var(--border);
+    }
+    .dial .cap {
+      font-family:var(--label); font-weight:700; font-size:.58rem;
+      text-transform:uppercase; letter-spacing:.08em; color:var(--sub);
+    }
+    .dial .now { font-family:var(--display); font-size:.9rem; color:var(--accent); }
+    .dial .unit { color:var(--sub); font-size:1.15rem; }
+    .dial .note {
+      flex-basis:100%; color:var(--sub); font-size:1.15rem; line-height:1.4; margin:0;
+    }
+    .foot {
+      display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+      padding:14px 16px; border-top:3px solid var(--border);
+    }
+    .foot .note { color:var(--sub); font-size:1.15rem; margin:0; }
+    .rank {
+      font-family:var(--display); font-size:.72rem; color:var(--sub);
+    }
+    tr.first .rank { color:var(--accent); }
     .empty {
       padding:44px 24px; text-align:center; color:var(--sub); font-size:1.3rem; line-height:1.36;
     }
@@ -324,6 +357,75 @@
           No users yet.
         </div>
         {% endif %}
+      </div>
+    </div>
+
+    {# การ์ดเกมงู — คนละเรื่องกับตารางผู้ใช้ข้างบน (นั่นคือคนที่มาให้ระบบเปลี่ยนชื่อคลิป
+       อันนี้คือคนที่แวะมาเล่นเกม) จึงแยกการ์ดกัน ไม่ยัดรวมตารางเดียว #}
+    <div class="card" id="snake-card">
+      <h2>Snake
+        <span class="count" id="snake-count">
+          {{ snake.totals.players }} player{{ '' if snake.totals.players == 1 else 's' }}
+        </span>
+      </h2>
+
+      <div class="dial">
+        <span class="cap">Game speed</span>
+        <button class="btn" type="button" id="speed-slower"
+                {% if snake.speed >= snake.speed_max %}disabled{% endif %}>Slower</button>
+        <span class="now" data-cell="speed-label">{{ snake.speed_label }}</span>
+        <span class="unit"><span data-cell="speed">{{ snake.speed }}</span> frames per step</span>
+        <button class="btn" type="button" id="speed-faster"
+                {% if snake.speed <= snake.speed_min %}disabled{% endif %}>Faster</button>
+        <button class="btn tiny" type="button" id="speed-reset">Back to {{ snake.speed_default }}</button>
+        <p class="note">
+          Fewer frames per step means a faster snake. A change only affects games started
+          after it — a game already being played is still checked against the speed it was
+          handed out at, so nobody gets called a cheat for a change made mid-run. Scores set
+          at different speeds are not really comparable, which is why each row below records
+          the speed that score was made at.
+        </p>
+      </div>
+
+      <div class="scroll" id="snake-list">
+        {% if snake.players %}
+        <table>
+          <thead><tr>
+            <th>#</th><th>Player</th><th>Email</th><th>Best</th>
+            <th>At speed</th><th>Games</th><th>Last played</th><th></th>
+          </tr></thead>
+          <tbody>
+            {% for p in snake.players %}
+            <tr{% if loop.first and p.score %} class="first"{% endif %}>
+              <td><span class="rank">{{ '%02d'|format(loop.index) }}</span></td>
+              <td><div class="who">
+                <div class="av" aria-hidden="true">{{ (p.name or '?')[0]|upper }}</div>
+                <span>{{ p.name }}{% if p.is_me %} <span class="muted">(you)</span>{% endif %}</span>
+              </div></td>
+              {# mailto: คือเหตุผลที่ดึงอีเมลมาแสดง — กดแล้วติดต่อคนชนะได้เลย #}
+              <td>{% if p.email %}<a href="mailto:{{ p.email }}">{{ p.email }}</a>
+                  {% else %}<span class="muted">no account</span>{% endif %}</td>
+              <td>{{ p.score }}{% if p.perfect %} <span class="pill on">Perfect</span>{% endif %}</td>
+              <td class="muted">{{ p.best_frames or '—' }}</td>
+              <td class="muted">{{ p.plays }}</td>
+              <td class="muted">{{ p.last_played }}</td>
+              <td><button class="btn tiny danger" type="button" data-del="{{ p.id }}">Delete</button></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty">
+          <span class="box" aria-hidden="true">00</span>
+          <strong>Nobody has played yet</strong>
+          A row appears here the first time someone finishes a game while signed in.
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="foot">
+        <button class="btn danger" type="button" id="snake-clear">Clear the whole board</button>
+        <p class="note" data-cell="snake-plays">{{ snake.totals.plays }} game{{ '' if snake.totals.plays == 1 else 's' }} played &middot; best {{ snake.totals.best }}</p>
       </div>
     </div>
   </div>
@@ -478,6 +580,200 @@
         list.appendChild(table);
       }
 
+      /* ---------------------------------------------------------- Snake card */
+      var snakeList = document.getElementById('snake-list');
+      var snakeCount = document.getElementById('snake-count');
+      var snakePlays = document.querySelector('[data-cell="snake-plays"]');
+      var slower = document.getElementById('speed-slower');
+      var faster = document.getElementById('speed-faster');
+      var resetSpeed = document.getElementById('speed-reset');
+      var clearBoard = document.getElementById('snake-clear');
+      var lastSnake = null;
+
+      /* ตั้งจากค่าที่เซิร์ฟเวอร์เรนเดอร์มา ไม่ใช่ null — ปุ่มกดได้ตั้งแต่ก่อน poll รอบแรกจะกลับมา */
+      var speed = {{ snake.speed }};
+      var speedMin = {{ snake.speed_min }};
+      var speedMax = {{ snake.speed_max }};
+      var speedDefault = {{ snake.speed_default }};
+
+      /* อีเมลมาจากบัญชี Google ก็จริง แต่ยัดลง href ดื้อ ๆ ไม่ได้ — รับเฉพาะรูปแบบที่
+         ไม่มีอักขระซึ่งพา URL ไปที่อื่นได้ นอกนั้นแสดงเป็นข้อความเปล่า ๆ */
+      function mailCell(email) {
+        var cellEl = document.createElement('td');
+        if (!email) {
+          var none = document.createElement('span');
+          none.className = 'muted';
+          none.textContent = 'no account';
+          cellEl.appendChild(none);
+          return cellEl;
+        }
+        if (/^[^\s<>"'`\\]+@[^\s<>"'`\\]+\.[^\s<>"'`\\]+$/.test(email)) {
+          var a = document.createElement('a');
+          a.href = 'mailto:' + email;
+          a.textContent = email;
+          cellEl.appendChild(a);
+        } else {
+          cellEl.textContent = email;
+        }
+        return cellEl;
+      }
+
+      function snakeRow(p, i) {
+        var tr = document.createElement('tr');
+        if (i === 0 && p.score) tr.className = 'first';
+
+        var rankTd = document.createElement('td');
+        var rank = document.createElement('span');
+        rank.className = 'rank';
+        rank.textContent = (i < 9 ? '0' : '') + (i + 1);
+        rankTd.appendChild(rank);
+        tr.appendChild(rankTd);
+
+        var who = document.createElement('div');
+        who.className = 'who';
+        var av = document.createElement('div');
+        av.className = 'av';
+        av.setAttribute('aria-hidden', 'true');
+        av.textContent = (p.name || '?').charAt(0).toUpperCase();
+        var nm = document.createElement('span');
+        nm.textContent = p.name || '—';
+        if (p.is_me) {
+          var you = document.createElement('span');
+          you.className = 'muted';
+          you.textContent = ' (you)';
+          nm.appendChild(you);
+        }
+        who.appendChild(av);
+        who.appendChild(nm);
+        var whoTd = document.createElement('td');
+        whoTd.appendChild(who);
+        tr.appendChild(whoTd);
+
+        tr.appendChild(mailCell(p.email));
+
+        var best = document.createElement('td');
+        best.textContent = p.score;
+        if (p.perfect) {
+          var pill = document.createElement('span');
+          pill.className = 'pill on';
+          pill.textContent = 'Perfect';
+          best.appendChild(document.createTextNode(' '));
+          best.appendChild(pill);
+        }
+        tr.appendChild(best);
+
+        tr.appendChild(td(p.best_frames || '—', 'muted'));
+        tr.appendChild(td(p.plays, 'muted'));
+        tr.appendChild(td(p.last_played, 'muted'));
+
+        var act = document.createElement('td');
+        var del = document.createElement('button');
+        del.className = 'btn tiny danger';
+        del.type = 'button';
+        del.textContent = 'Delete';
+        del.setAttribute('data-del', p.id);
+        act.appendChild(del);
+        tr.appendChild(act);
+        return tr;
+      }
+
+      function drawSnake(s) {
+        speed = s.speed;
+        speedMin = s.speed_min;
+        speedMax = s.speed_max;
+        speedDefault = s.speed_default;
+
+        cell('speed', s.speed);
+        cell('speed-label', s.speed_label);
+        slower.disabled = s.speed >= s.speed_max;
+        faster.disabled = s.speed <= s.speed_min;
+        resetSpeed.disabled = s.speed === s.speed_default;
+
+        var n = s.totals.players;
+        snakeCount.textContent = n + ' player' + (n === 1 ? '' : 's');
+        snakePlays.textContent = s.totals.plays + ' game'
+          + (s.totals.plays === 1 ? '' : 's') + ' played · best ' + s.totals.best;
+
+        var key = JSON.stringify(s.players);
+        if (key === lastSnake) return;     /* ไม่มีใครขยับ ปล่อย DOM ไว้อย่างนั้น */
+        lastSnake = key;
+
+        snakeList.textContent = '';
+        if (!s.players.length) {
+          var empty = document.createElement('div');
+          empty.className = 'empty';
+          var box = document.createElement('span');
+          box.className = 'box';
+          box.setAttribute('aria-hidden', 'true');
+          box.textContent = '00';
+          var strong = document.createElement('strong');
+          strong.textContent = 'Nobody has played yet';
+          empty.appendChild(box);
+          empty.appendChild(strong);
+          empty.appendChild(document.createTextNode(
+            'A row appears here the first time someone finishes a game while signed in.'));
+          snakeList.appendChild(empty);
+          return;
+        }
+
+        var table = document.createElement('table');
+        var head = document.createElement('thead');
+        var hr = document.createElement('tr');
+        ['#', 'Player', 'Email', 'Best', 'At speed', 'Games', 'Last played', '']
+          .forEach(function (h) {
+            var th = document.createElement('th');
+            th.textContent = h;
+            hr.appendChild(th);
+          });
+        head.appendChild(hr);
+        table.appendChild(head);
+        var body = document.createElement('tbody');
+        s.players.forEach(function (p, i) { body.appendChild(snakeRow(p, i)); });
+        table.appendChild(body);
+        snakeList.appendChild(table);
+      }
+
+      /* ทุกปุ่มคืน snapshot ชุดใหม่มาเลย จึงวาดทับได้ทันทีไม่ต้องรอรอบ poll ถัดไป */
+      function post(url, body) {
+        return fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body || {})
+        })
+          .then(function (r) {
+            if (!r.ok) throw new Error(r.status);
+            return r.json();
+          })
+          .then(apply)
+          .catch(function () {
+            live.classList.add('stale');
+            liveText.textContent = 'That did not go through — reload the page';
+          });
+      }
+
+      slower.addEventListener('click', function () {
+        post('{{ url_for("admin_snake_speed") }}', { frames: speed + 1 });
+      });
+      faster.addEventListener('click', function () {
+        post('{{ url_for("admin_snake_speed") }}', { frames: speed - 1 });
+      });
+      resetSpeed.addEventListener('click', function () {
+        post('{{ url_for("admin_snake_speed") }}', { frames: speedDefault });
+      });
+
+      /* ปุ่มลบเกิดใหม่ทุกครั้งที่ตารางถูกวาด ดักที่ตัวกล่องแทนจึงไม่ต้องผูกใหม่ทุกรอบ */
+      snakeList.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-del]');
+        if (!btn) return;
+        if (!window.confirm('Delete this player\'s score and play history?')) return;
+        post('{{ url_for("admin_snake_delete") }}', { id: Number(btn.getAttribute('data-del')) });
+      });
+
+      clearBoard.addEventListener('click', function () {
+        if (!window.confirm('Delete every Snake score and start over? This cannot be undone.')) return;
+        post('{{ url_for("admin_snake_clear") }}', { confirm: true });
+      });
+
       function apply(d) {
         /* The heading and the tab both count themselves, the way the video that started
            this project does. Free here: the number comes from our own database. */
@@ -495,6 +791,7 @@
         cell('burst', d.quota.burst ? ' [burst]' : '');
         count.textContent = d.rows.length + ' row' + (d.rows.length === 1 ? '' : 's');
         drawRows(d.rows);
+        drawSnake(d.snake);
         live.classList.remove('stale');
         liveText.textContent = 'Live — refreshed at ' + d.now;
       }
